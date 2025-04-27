@@ -92,13 +92,13 @@ export default function Profile() {
   if (!profile) return <div className="min-h-screen bg-[#373737] text-white flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#373737]">
+    <div className="min-h-screen flex flex-col bg-[#1e1e2e]">
       <Navbar userType={profile.userType} />
       <main className="flex-1 p-6">
-        <div className="bg-[#313131] p-6 rounded-lg mb-8 shadow-md">
-          <h1 className="text-3xl font-semibold text-center uppercase text-white">Profile Details</h1>
+        <div className="bg-accent hover: p-6 rounded-lg mb-8 shadow-md">
+          <h1 className="text-3xl font-semibold text-center text-white">Profile Details</h1>
         </div>
-        <div className="bg-[#d9d9d9] p-8 rounded-lg shadow-md">
+        <div className="bg-[#372e37] hover:bg-transparent p-8 rounded-lg bg-opacity-70 shadow-md">
           <div className="flex justify-center mb-6">
             <img
               src={`http://localhost:5000${profile.profilePic}`}
@@ -108,14 +108,14 @@ export default function Profile() {
             />
           </div>
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-[#313131]">{profile.username}</h2>
-            <p className="text-[#313131]">{profile.email}</p>
-            <p className="text-sm text-gray-600 capitalize">{profile.userType}</p>
+            <h2 className="text-2xl font-bold text-[#d5d5d5]">{profile.username}</h2>
+            <p className="text-[#d5d5d5]">{profile.email}</p>
+            <p className="text-sm text-[#d5d5d5] capitalize">{profile.userType}</p>
           </div>
           {profile.resumeParsed ? (
             editMode ? (
               <div className="mt-4">
-                <h3 className="font-bold text-[#313131] text-lg mb-2">Contact</h3>
+                <h3 className="font-bold text-[#d5d5d5] text-lg mb-2">Contact</h3>
                 <input
                   name="name"
                   value={formData.contact?.name || ""}
@@ -137,7 +137,7 @@ export default function Profile() {
                   className="input-field mb-2"
                   placeholder="Phone"
                 />
-                <h3 className="font-bold text-[#313131] text-lg mt-4 mb-2">Skills</h3>
+                <h3 className="font-bold text-[#d5d5d5] text-lg mt-4 mb-2">Skills</h3>
                 {formData.skills?.map((skill, i) => (
                   <div key={i} className="flex items-center mb-2">
                     <input
@@ -160,7 +160,7 @@ export default function Profile() {
                 >
                   Add Skill
                 </button>
-                <h3 className="font-bold text-[#313131] text-lg mt-4 mb-2">Experience</h3>
+                <h3 className="font-bold text-[#d5d5d5] text-lg mt-4 mb-2">Experience</h3>
                 {formData.experience?.map((exp, i) => (
                   <div key={i} className="mb-4 border-b pb-2">
                     <input
@@ -198,7 +198,7 @@ export default function Profile() {
                 >
                   Add Experience
                 </button>
-                <h3 className="font-bold text-[#313131] text-lg mt-4 mb-2">Education</h3>
+                <h3 className="font-bold text-[#d5d5d5] text-lg mt-4 mb-2">Education</h3>
                 {formData.education?.map((edu, i) => (
                   <div key={i} className="mb-4 border-b pb-2">
                     <input
@@ -254,37 +254,37 @@ export default function Profile() {
             ) : (
               <div className="mt-4 space-y-6">
                 <div>
-                  <h3 className="font-bold text-[#313131] text-lg mb-2">Contact</h3>
-                  <p className="text-[#313131]">{profile.resumeParsed.contact?.name || "N/A"}</p>
-                  <p className="text-[#313131]">{profile.resumeParsed.contact?.email || "N/A"}</p>
-                  <p className="text-[#313131]">{profile.resumeParsed.contact?.phone || "N/A"}</p>
+                  <h3 className="font-bold text-[#d5d5d5] text-lg mb-2">Contact</h3>
+                  <p className="text-[#d5d5d5]">{profile.resumeParsed.contact?.name || "N/A"}</p>
+                  <p className="text-[#d5d5d5]">{profile.resumeParsed.contact?.email || "N/A"}</p>
+                  <p className="text-[#d5d5d5]">{profile.resumeParsed.contact?.phone || "N/A"}</p>
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#313131] text-lg mb-2">Skills</h3>
-                  <ul className="list-disc pl-4 text-[#313131]">
+                  <h3 className="font-bold text-[#d5d5d5] text-lg mb-2">Skills</h3>
+                  <ul className="list-disc pl-4 text-[#d5d5d5]">
                     {profile.resumeParsed.skills?.map((s) => <li key={s}>{s}</li>) || <li>N/A</li>}
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#313131] text-lg mb-2">Experience</h3>
+                  <h3 className="font-bold text-[#d5d5d5] text-lg mb-2">Experience</h3>
                   {profile.resumeParsed.experience?.map((e, i) => (
-                    <p key={i} className="text-[#313131]">
+                    <p key={i} className="text-[#d5d5d5]">
                       {e.title} at {e.company} ({e.years})
                     </p>
-                  )) || <p className="text-[#313131]">N/A</p>}
+                  )) || <p className="text-[#d5d5d5]">N/A</p>}
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#313131] text-lg mb-2">Education</h3>
+                  <h3 className="font-bold text-[#d5d5d5] text-lg mb-2">Education</h3>
                   {profile.resumeParsed.education?.map((e, i) => (
-                    <p key={i} className="text-[#313131]">
+                    <p key={i} className="text-[#d5d5d5]">
                       {e.degree}, {e.school} ({e.year})
                     </p>
-                  )) || <p className="text-[#313131]">N/A</p>}
+                  )) || <p className="text-[#d5d5d5]">N/A</p>}
                 </div>
                 <div className="flex justify-center mt-6">
                   <button
                     onClick={() => setEditMode(true)}
-                    className="bg-[#313131] text-white px-6 py-2 rounded hover:bg-[#4a4a4a] transition"
+                    className="bg-secondary text-black px-6 py-2 rounded hover:bg-primary transition"
                   >
                     Edit
                   </button>
@@ -292,7 +292,7 @@ export default function Profile() {
               </div>
             )
           ) : (
-            <p className="text-center text-[#313131]">No resume uploaded yet.</p>
+            <p className="text-center text-[#d5d5d5]">No resume uploaded yet.</p>
           )}
         </div>
       </main>

@@ -499,7 +499,7 @@ export default function Dashboard() {
             
             <div className="card hover:border-primary group cursor-pointer" onClick={() => setShowPreferencesPopup(true)}>
               <div className="p-3 rounded-full bg-primary bg-opacity-20 inline-block mb-4 group-hover:bg-primary group-hover:bg-opacity-30 transition-all">
-                <Settings className="h-6 w-6 text-primary" />
+                {/* <Settings className="h-6 w-6 text-primary" /> */}
               </div>
               <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors mb-2">
                 Update Preferences
