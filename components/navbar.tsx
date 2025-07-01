@@ -1,3 +1,4 @@
+// /app/components/Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -5,7 +6,7 @@ import { Menu, Bell, User, LogOut, Settings, Home, Briefcase, FileText } from 'l
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import Sidebar from "./sidebar"; // Import the Sidebar component
+import Sidebar from "./sidebar";
 import { skillOptions, domainOptions } from "@/lib/utils";
 
 interface NavbarProps {
@@ -15,7 +16,7 @@ interface NavbarProps {
 export default function Navbar({ userType = "candidate" }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [profilePic, setProfilePic] = useState<string>("/uploads/default.jpg");
+  const [profilePic, setProfilePic] = useState<string>("/images/default-profile.png");
   const [imageError, setImageError] = useState(false);
   const [showPreferencesPopup, setShowPreferencesPopup] = useState(false);
   const [preferredSkills, setPreferredSkills] = useState<string[]>([]);
@@ -36,7 +37,7 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
         });
         if (!res.ok) throw new Error("Failed to fetch profile");
         const data = await res.json();
-        setProfilePic(data.profilePic || "/uploads/default.jpg");
+        setProfilePic(data.profilePic || "/images/default-profile.png");
         setUsername(data.username || "User");
         if (userType === "candidate") {
           setPreferredSkills(data.preferredSkills || []);
@@ -64,10 +65,8 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     if (!imageError) {
-      e.currentTarget.src = "/default.jpg";
+      e.currentTarget.src = "/images/default-profile.png";
       setImageError(true);
-    } else {
-      e.currentTarget.src = "https://via.placeholder.com/40";
     }
   };
 
@@ -184,7 +183,7 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
               <img
-                src={`http://localhost:5000${profilePic}`}
+                src={profilePic.startsWith('http') ? profilePic : `http://localhost:5000${profilePic}`}
                 alt="Profile"
                 className="w-8 h-8 rounded-full object-cover border-2 border-primary"
                 onError={handleImageError}
@@ -219,7 +218,6 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
         </div>
       </nav>
 
-      {/* Render Sidebar here */}
       <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} userType={userType} />
 
       {showPreferencesPopup && userType === "candidate" && (

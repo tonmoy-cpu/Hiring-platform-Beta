@@ -1,3 +1,4 @@
+// /app/profile/page.tsx
 "use client";
 
 import Navbar from "@/components/navbar";
@@ -89,6 +90,10 @@ export default function Profile() {
     }
   };
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = "/images/default-profile.png";
+  };
+
   if (!profile) return <div className="min-h-screen bg-[#373737] text-white flex items-center justify-center">Loading...</div>;
 
   return (
@@ -101,10 +106,10 @@ export default function Profile() {
         <div className="bg-[#372e37] hover:bg-transparent p-8 rounded-lg bg-opacity-70 shadow-md">
           <div className="flex justify-center mb-6">
             <img
-              src={`http://localhost:5000${profile.profilePic}`}
+              src={profile.profilePic?.startsWith('http') ? profile.profilePic : `http://localhost:5000${profile.profilePic || '/uploads/default-profile.png'}`}
               alt="Profile"
               className="w-32 h-32 rounded-full object-cover border-4 border-[#313131] shadow-lg"
-              onError={(e) => (e.target.src = "/default.jpg")}
+              onError={handleImageError}
             />
           </div>
           <div className="text-center mb-6">
