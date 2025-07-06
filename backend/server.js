@@ -1,3 +1,4 @@
+// backend/server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -14,7 +15,7 @@ const io = socketIo(server, { cors: { origin: "http://localhost:3000" } });
 app.use(cors({ origin: "http://localhost:3000" }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use("/uploads", express.static("uploads"));
+app.use("/Uploads", express.static(path.join(__dirname, "Uploads")));
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);

@@ -1,3 +1,4 @@
+// backend/models/User.js
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -5,7 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   userType: { type: String, enum: ["recruiter", "candidate"], required: true },
-  profilePic: { type: String, default: "default.jpg" },
+  profilePic: { type: String, default: "/Uploads/default-profile.png" },
   resumeParsed: {
     contact: { name: String, email: String, phone: String },
     skills: [{ type: String }],

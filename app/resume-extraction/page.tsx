@@ -1,3 +1,4 @@
+// /app/resume-extraction/page.tsx
 "use client";
 
 import Navbar from "@/components/navbar";
@@ -7,15 +8,23 @@ import { useRouter } from "next/navigation";
 export default function ResumeExtraction() {
   const [resumeFile, setResumeFile] = useState(null);
   const [parsedData, setParsedData] = useState(null);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // Added loading state
   const router = useRouter();
 
   const handleFileChange = (e) => {
     setResumeFile(e.target.files[0]);
+    setError(null); // Reset error on new file selection
   };
 
   const handleExtract = async () => {
-    if (!resumeFile) return alert("Please upload a resume file");
+    if (!resumeFile) {
+      showToast("Please upload a resume file");
+      return;
+    }
 
+    setIsLoading(true); // Set loading state
+    setError(null); // Reset error
     const formData = new FormData();
     formData.append("resume", resumeFile);
 
@@ -27,12 +36,16 @@ export default function ResumeExtraction() {
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Extraction failed");
-      setParsedData(data);
+      if (!res.ok) throw new Error(data.error || data.msg || "Extraction failed");
+      setParsedData(data.parsedData); // Set only parsedData
       showToast("Resume parsed and added to your profile!");
       setTimeout(() => router.push("/profile"), 2000);
     } catch (err) {
-      alert("Error: " + err.message);
+      console.error("Error extracting resume:", err.message);
+      setError(err.message);
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -51,8 +64,16 @@ export default function ResumeExtraction() {
             accept=".pdf"
             onChange={handleFileChange}
             className="w-full p-2 rounded-lg border border-[#313131] text-[#313131]"
+            disabled={isLoading} // Disable input during loading
           />
-          <button onClick={handleExtract} className="submit-button mt-4">Extract</button>
+          <button
+            onClick={handleExtract}
+            className="submit-button mt-4"
+            disabled={isLoading} // Disable button during loading
+          >
+            {isLoading ? "Extracting..." : "Extract"}
+          </button>
+          {error && <p className="text-red-500 mt-4">{error}</p>}
         </div>
         {parsedData && (
           <div className="mt-8 bg-[#d9d9d9] p-6 rounded-lg shadow-md">
@@ -60,19 +81,41 @@ export default function ResumeExtraction() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-bold">Contact</h3>
-                <p>{parsedData.contact.name}<br/>{parsedData.contact.email}<br/>{parsedData.contact.phone}</p>
+                <p>
+                  {parsedData.contact?.name || "N/A"}<br />
+                  {parsedData.contact?.email || "N/A"}<br />
+                  {parsedData.contact?.phone || "N/A"}
+                </p>
               </div>
               <div>
                 <h3 className="font-bold">Skills</h3>
-                <ul className="list-disc pl-4">{parsedData.skills.map(s => <li key={s}>{s}</li>)}</ul>
+                <ul className="list-disc pl-4">
+                  {parsedData.skills?.length > 0 ? parsedData.skills.map((s, i) => <li key={i}>{s || "N/A"}</li>) : <li>N/A</li>}
+                </ul>
               </div>
               <div>
                 <h3 className="font-bold">Experience</h3>
-                {parsedData.experience.map((e, i) => <p key={i}>{e.title} at {e.company} ({e.years})</p>)}
+                {parsedData.experience?.length > 0 ? (
+                  parsedData.experience.map((e, i) => (
+                    <p key={i}>
+                      {e.title || "N/A"} at {e.company || "N/A"} ({e.years || "N/A"})
+                    </p>
+                  ))
+                ) : (
+                  <p>N/A</p>
+                )}
               </div>
               <div>
                 <h3 className="font-bold">Education</h3>
-                {parsedData.education.map((e, i) => <p key={i}>{e.degree}, {e.school} ({e.year})</p>)}
+                {parsedData.education?.length > 0 ? (
+                  parsedData.education.map((e, i) => (
+                    <p key={i}>
+                      {e.degree || "N/A"}, {e.school || "N/A"} ({e.year || "N/A"})
+                    </p>
+                  ))
+                ) : (
+                  <p>N/A</p>
+                )}
               </div>
             </div>
           </div>
