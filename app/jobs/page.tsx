@@ -54,8 +54,7 @@ export default function Jobs() {
         if (!appsRes.ok) throw new Error(`Applications fetch failed: ${appsRes.status}`);
 
         const jobsData = await jobsRes.json();
-        const appsData = await appsRes.json();
-
+        console.log("Fetched jobs:", JSON.stringify(jobsData, null, 2)); // Debug job data
         setJobs(jobsData);
         setAppliedJobs(appsData.map((app) => app.job._id));
         setApplications(appsData);
@@ -106,8 +105,9 @@ export default function Jobs() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!extractRes.ok) throw new Error(`Resume extraction failed: ${extractRes.status}`);
-      const { resumeText } = await extractRes.json();
+      const extractData = await extractRes.json();
+      if (!extractRes.ok) throw new Error(extractData.error || `Resume extraction failed: ${extractRes.status}`);
+      const { resumeText } = extractData;
 
       const applyRes = await fetch("http://localhost:5000/api/applications/apply", {
         method: "POST",
@@ -123,6 +123,7 @@ export default function Jobs() {
       setCoverLetter("");
       toast.success("Application submitted successfully!");
     } catch (err) {
+      console.error("Error applying:", err.message);
       toast.error(`Error applying: ${err.message}`);
       if (err.message.includes("401")) {
         localStorage.removeItem("token");
@@ -154,6 +155,7 @@ export default function Jobs() {
       };
       reader.readAsDataURL(resumeFile);
     } catch (err) {
+      console.error("Error analyzing resume:", err.message);
       toast.error(`Error analyzing resume: ${err.message}`);
       if (err.message.includes("401")) {
         localStorage.removeItem("token");
@@ -208,10 +210,10 @@ export default function Jobs() {
 
   const filteredJobs = jobs.filter((job) => {
     const textMatch =
-      job.title.toLowerCase().includes(filter.toLowerCase()) ||
-      job.details.toLowerCase().includes(filter.toLowerCase());
+      job.title?.toLowerCase().includes(filter.toLowerCase()) ||
+      job.details?.toLowerCase().includes(filter.toLowerCase());
     const skillMatch = skillFilter
-      ? job.skills.some((skill) => skill.toLowerCase().includes(skillFilter.toLowerCase()))
+      ? Array.isArray(job.skills) && job.skills.some((skill) => skill.toLowerCase().includes(skillFilter.toLowerCase()))
       : true;
     const salaryMatch = () => {
       if (!job.salary) return !minSalary && !maxSalary;
@@ -289,7 +291,9 @@ export default function Jobs() {
             <div key={job._id} className="job-card p-6 rounded-lg shadow-md bg-[#d9d9d9]">
               <h3 className="font-semibold text-lg mb-2 text-[#313131]">{job.title}</h3>
               <p className="text-sm text-[#313131]">{job.details}</p>
-              <p className="text-xs text-gray-600 mt-1">Skills: {job.skills.join(", ")}</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Skills: {Array.isArray(job.skills) ? job.skills.join(", ") : "Not specified"}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Salary: {job.salary || "Not specified"}</p>
               <p className="text-xs text-gray-600 mt-1">Status: {job.isClosed ? "Closed" : "Open"}</p>
               <div className="mt-4 flex justify-end space-x-2">
@@ -385,13 +389,13 @@ export default function Jobs() {
                 {analysisResult && (
                   <div className="text-[#313131]">
                     <p><strong>Match Score:</strong> {analysisResult.matchScore}%</p>
-                    <p><strong>Missing Keywords:</strong> {analysisResult.missingKeywords.join(", ") || "None"}</p>
-                    <p><strong>Missing Skills:</strong> {analysisResult.missingSkills.join(", ") || "None"}</p>
+                    <p><strong>Missing Keywords:</strong> {Array.isArray(analysisResult.missingKeywords) ? analysisResult.missingKeywords.join(", ") : "None"}</p>
+                    <p><strong>Missing Skills:</strong> {Array.isArray(analysisResult.missingSkills) ? analysisResult.missingSkills.join(", ") : "None"}</p>
                     <p><strong>Feedback:</strong></p>
                     <ul className="list-disc pl-5">
-                      {analysisResult.feedback.map((item, index) => (
+                      {Array.isArray(analysisResult.feedback) ? analysisResult.feedback.map((item, index) => (
                         <li key={index}>{item}</li>
-                      ))}
+                      )) : "No feedback available"}
                     </ul>
                   </div>
                 )}

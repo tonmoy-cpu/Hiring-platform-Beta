@@ -1,4 +1,3 @@
-// backend/server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -51,12 +50,20 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async ({ chatId, message }) => {
     try {
       const Chat = require("./models/Chat");
+      const Application = require("./models/Application");
       const chat = await Chat.findById(chatId);
       if (!chat) throw new Error("Chat not found");
+
+      const application = await Application.findById(chat.application).populate("job candidate");
+      const recipientId =
+        socket.user.id === application.candidate._id.toString()
+          ? application.job.recruiter.toString()
+          : application.candidate._id.toString();
+
       chat.messages.push(message);
       await chat.save();
       io.to(chatId).emit("message", message);
-      io.emit("notification", { chatId, message });
+      io.to(recipientId).emit("notification", { chatId, message });
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -77,10 +84,22 @@ app.use((err, req, res, next) => {
   res.status(500).json({ msg: "Server error", error: err.message });
 });
 
+// Validate environment variables
+const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "NANONETS_API_KEY", "NANONETS_MODEL_ID"];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Missing environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 mongoose
   .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
