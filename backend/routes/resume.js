@@ -47,6 +47,44 @@ const NANONETS_API_KEY = "9a0cbcaf-5a8a-11f0-ba5f-5674e77ef5ba"; // Validated AP
 const NANONETS_MODEL_ID = "a8cc4e07-394c-40bb-bf78-97f7fb0b1c07"; // Validated model ID
 const NANONETS_API_URL = `https://app.nanonets.com/api/v2/OCR/Model/${NANONETS_MODEL_ID}/LabelFile/`;
 
+// Exponential backoff function
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const MAX_RETRIES = 3;
+const BASE_DELAY = 1000; // 1 second
+
+async function makeNanonetsRequest(formData) {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await axios.post(NANONETS_API_URL, formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        auth: {
+          username: NANONETS_API_KEY,
+          password: "",
+        },
+      });
+      console.log("Nanonets full response (attempt", attempt, "):", JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (apiErr) {
+      if (apiErr.response?.status === 500 && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt - 1);
+        console.log(`Nanonets 500 error on attempt ${attempt}, retrying after ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+      console.error("Nanonets API error:", {
+        status: apiErr.response?.status,
+        data: apiErr.response?.data,
+        message: apiErr.message,
+        stack: apiErr.stack,
+      });
+      throw apiErr;
+    }
+  }
+  throw new Error("Max retries reached for Nanonets API");
+}
+
 router.post("/extract", auth, upload.single("resume"), async (req, res) => {
   if (req.user.userType !== "candidate") {
     console.log("Unauthorized attempt by user:", req.user.id);
@@ -71,33 +109,17 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
       contentType: req.file.mimetype,
     });
 
-    // Send resume to Nanonets API
+    // Send resume to Nanonets API with retry logic
     let resumeData;
     try {
-      const response = await axios.post(NANONETS_API_URL, formData, {
-        headers: {
-          ...formData.getHeaders(),
-        },
-        auth: {
-          username: NANONETS_API_KEY,
-          password: "",
-        },
-      });
-      console.log("Nanonets full response:", JSON.stringify(response.data, null, 2));
-      resumeData = response.data.result; // Array of pages with predictions
-      console.log("Nanonets parsed resume data:", JSON.stringify(resumeData, null, 2));
+      resumeData = await makeNanonetsRequest(formData);
+      console.log("Nanonets parsed resume data:", JSON.stringify(resumeData.result, null, 2));
     } catch (apiErr) {
-      console.error("Nanonets API error:", {
-        status: apiErr.response?.status,
-        data: apiErr.response?.data,
-        message: apiErr.message,
-        stack: apiErr.stack,
-      });
       throw new Error(`Nanonets API failed: ${apiErr.message}`);
     }
 
     // Combine predictions from all pages
-    const allPredictions = resumeData.flatMap(page => page.prediction);
+    const allPredictions = resumeData.result.flatMap(page => page.prediction);
 
     // Map Nanonets response to resumeParsed format
     const parsedData = {
@@ -157,7 +179,7 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
     await user.save();
     console.log("After update - User resumeParsed:", JSON.stringify(user.resumeParsed, null, 2));
 
-    res.json({ parsedData, resumeText: resumeData.map(page => page.prediction.map(p => p.ocr_text).join(" ")).join(" ") });
+    res.json({ parsedData, resumeText: resumeData.result.map(page => page.prediction.map(p => p.ocr_text).join(" ")).join(" ") });
   } catch (err) {
     console.error("Error in /extract:", err.message, err.stack);
     res.status(500).json({ msg: "Server error", error: err.message });
