@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -32,18 +33,23 @@ export default function Login() {
         // Fetch user profile to get userType
         const profileRes = await fetch("http://localhost:5000/api/auth/profile", {
           headers: { Authorization: `Bearer ${data.token}` },
+          cache: "no-store",
         });
+        if (!profileRes.ok) throw new Error("Failed to fetch profile");
         const user = await profileRes.json();
         console.log("User profile after login:", user);
+        localStorage.setItem("userType", user.userType);
+        localStorage.setItem("userId", user._id);
         const redirectPath = user.userType === "recruiter" ? "/recruiter/dashboard" : "/dashboard";
         console.log("Redirecting to:", redirectPath);
+        toast.success("Login successful!");
         router.push(redirectPath);
       } else {
-        alert(data.msg);
+        throw new Error(data.msg || "No token received");
       }
     } catch (err) {
-      console.error("Login error:", err);
-      alert("Login failed: " + err.message);
+      console.error("Login error:", err.message);
+      toast.error("Login failed: " + err.message);
     }
   };
 

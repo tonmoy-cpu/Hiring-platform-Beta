@@ -8,6 +8,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const multer = require("multer");
 const FormData = require("form-data");
+const { analyzeResumeAgainstJob } = require("../utils/ai");
 
 const uploadDir = path.join(__dirname, "../../Uploads/resumes");
 fs.mkdir(uploadDir, { recursive: true })
@@ -86,6 +87,7 @@ async function makeNanonetsRequest(formData, filename) {
   throw new Error("Max retries reached for Nanonets API");
 }
 
+// Unchanged /extract endpoint
 router.post("/extract", auth, upload.single("resume"), async (req, res) => {
   if (req.user.userType !== "candidate") {
     console.log("Unauthorized attempt by user:", req.user.id);
@@ -191,6 +193,7 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
   }
 });
 
+// Unchanged /download endpoint
 router.get("/download", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -213,32 +216,41 @@ router.get("/download", auth, async (req, res) => {
   }
 });
 
+// Updated /analyze endpoint to use Gemini-powered analysis
 router.post("/analyze", auth, async (req, res) => {
   try {
+    const { jobId, resume } = req.body;
     const user = await User.findById(req.user.id);
-    if (!user || !user.resumeParsed) {
-      console.log("Resume data not found for user:", req.user.id);
-      return res.status(404).json({ msg: "Resume data not found" });
+    if (!user) {
+      console.log("User not found:", req.user.id);
+      return res.status(404).json({ msg: "User not found" });
     }
 
-    const { jobId } = req.body;
     const job = await Job.findById(jobId);
     if (!job) {
       console.log("Job not found:", jobId);
       return res.status(404).json({ msg: "Job not found" });
     }
 
-    const resumeSkills = user.resumeParsed.skills || [];
-    const jobSkills = Array.isArray(job.skills) ? job.skills : []; // Ensure job.skills is an array
-    const matchScore = resumeSkills.reduce((score, skill) => {
-      return jobSkills.includes(skill) ? score + 1 : score;
-    }, 0) / (jobSkills.length || 1) * 100;
+    // Decode base64 resume to text
+    const resumeText = Buffer.from(resume, "base64").toString("utf-8");
+    console.log("Decoded resume text (first 100 chars):", resumeText.substring(0, 100));
 
-    console.log("Resume analysis - User:", req.user.id, "Job:", jobId, "Match score:", matchScore);
-    res.json({ matchScore, resumeData: user.resumeParsed });
+    // Use Gemini-powered analysis
+    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
+
+    console.log("Final analysis response sent to frontend:", JSON.stringify(analysisResult, null, 2));
+
+    res.json({
+      matchScore: analysisResult.score,
+      matchedSkills: analysisResult.matchedSkills,
+      missingSkills: analysisResult.missingSkills,
+      feedback: analysisResult.feedback,
+      resumeData: user.resumeParsed,
+    });
   } catch (err) {
     console.error("Error in /analyze:", err.message);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
 

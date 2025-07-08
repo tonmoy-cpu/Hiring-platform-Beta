@@ -54,7 +54,9 @@ export default function Jobs() {
         if (!appsRes.ok) throw new Error(`Applications fetch failed: ${appsRes.status}`);
 
         const jobsData = await jobsRes.json();
-        console.log("Fetched jobs:", JSON.stringify(jobsData, null, 2)); // Debug job data
+        const appsData = await appsRes.json();
+
+        console.log("Fetched jobs:", JSON.stringify(jobsData, null, 2));
         setJobs(jobsData);
         setAppliedJobs(appsData.map((app) => app.job._id));
         setApplications(appsData);
@@ -151,7 +153,17 @@ export default function Jobs() {
 
         if (!analyzeRes.ok) throw new Error(`Analysis failed: ${analyzeRes.status}`);
         const result = await analyzeRes.json();
-        setAnalysisResult(result);
+        console.log("Frontend received analysis result:", JSON.stringify(result, null, 2));
+        // Enhance analysis by ensuring missing skills and feedback are populated
+        if (!result.missingSkills || !result.feedback) {
+          const job = jobs.find(j => j._id === jobId);
+          const resumeSkills = result.extractedSkills || [];
+          const missingSkills = job.skills.filter(skill => !resumeSkills.includes(skill));
+          const feedback = missingSkills.length > 0 ? [`Consider upskilling in: ${missingSkills.join(", ")}`] : ["Your skills align well with this job!"];
+          setAnalysisResult({ ...result, missingSkills, feedback });
+        } else {
+          setAnalysisResult(result);
+        }
       };
       reader.readAsDataURL(resumeFile);
     } catch (err) {
@@ -305,7 +317,7 @@ export default function Jobs() {
                 </button>
                 {appliedJobs.includes(job._id) && (
                   <button
-                    onClick={() => openChat(applications.find((app) => app.job._id === job._id)._id)}
+                    onClick={() => openChat(applications.find((app) => app.job._id === job._id)?._id)}
                     className="text-sm px-4 py-2 rounded-lg bg-[#4a4a4a] text-white hover:bg-[#313131]"
                   >
                     Chat
@@ -386,18 +398,36 @@ export default function Jobs() {
                     className="w-full p-2 rounded-lg border border-[#313131] text-[#313131]"
                   />
                 </div>
-                {analysisResult && (
+                {analysisResult ? (
                   <div className="text-[#313131]">
-                    <p><strong>Match Score:</strong> {analysisResult.matchScore}%</p>
-                    <p><strong>Missing Keywords:</strong> {Array.isArray(analysisResult.missingKeywords) ? analysisResult.missingKeywords.join(", ") : "None"}</p>
-                    <p><strong>Missing Skills:</strong> {Array.isArray(analysisResult.missingSkills) ? analysisResult.missingSkills.join(", ") : "None"}</p>
-                    <p><strong>Feedback:</strong></p>
+                    <p className="font-semibold"><strong>Eligibility Score:</strong> {analysisResult.matchScore}%</p>
+                    <p className="font-semibold mt-2"><strong>Matched Skills:</strong></p>
+                    <p>{Array.isArray(analysisResult.matchedSkills) && analysisResult.matchedSkills.length > 0 ? analysisResult.matchedSkills.join(", ") : "None"}</p>
+                    <p className="font-semibold mt-2"><strong>Missing Skills:</strong></p>
                     <ul className="list-disc pl-5">
-                      {Array.isArray(analysisResult.feedback) ? analysisResult.feedback.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      )) : "No feedback available"}
+                      {Array.isArray(analysisResult.missingSkills) && analysisResult.missingSkills.length > 0 ? (
+                        analysisResult.missingSkills.map((item, index) => (
+                          <li key={index}>
+                            {typeof item === "string" ? item : `${item.skill} - ${item.suggestion}`}
+                          </li>
+                        ))
+                      ) : (
+                        <li>No missing skills identified.</li>
+                      )}
+                    </ul>
+                    <p className="font-semibold mt-2"><strong>Feedback:</strong></p>
+                    <ul className="list-disc pl-5">
+                      {Array.isArray(analysisResult.feedback) && analysisResult.feedback.length > 0 ? (
+                        analysisResult.feedback.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))
+                      ) : (
+                        <li>No feedback available. Try uploading a detailed resume.</li>
+                      )}
                     </ul>
                   </div>
+                ) : (
+                  <p className="text-[#313131]">Upload a resume and click Analyze to see results.</p>
                 )}
                 <div className="flex justify-end space-x-2">
                   <button
