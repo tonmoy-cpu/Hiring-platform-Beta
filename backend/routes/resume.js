@@ -87,7 +87,6 @@ async function makeNanonetsRequest(formData, filename) {
   throw new Error("Max retries reached for Nanonets API");
 }
 
-// Unchanged /extract endpoint
 router.post("/extract", auth, upload.single("resume"), async (req, res) => {
   if (req.user.userType !== "candidate") {
     console.log("Unauthorized attempt by user:", req.user.id);
@@ -102,17 +101,14 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
     const pdfPath = req.file.path;
     console.log("Processing file at:", pdfPath, "Size:", req.file.size, "bytes");
 
-    // Read file buffer
     const fileBuffer = await fs.readFile(pdfPath);
 
-    // Prepare FormData for Nanonets API
     const formData = new FormData();
     formData.append("file", fileBuffer, {
       filename: req.file.filename,
       contentType: req.file.mimetype,
     });
 
-    // Send resume to Nanonets API with retry logic
     let resumeData;
     try {
       resumeData = await makeNanonetsRequest(formData, req.file.filename);
@@ -121,10 +117,8 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
       throw new Error(`Nanonets API failed: ${apiErr.message}`);
     }
 
-    // Combine predictions from all pages
     const allPredictions = resumeData.result.flatMap(page => page.prediction);
 
-    // Map Nanonets response to resumeParsed format
     const parsedData = {
       contact: {
         name: allPredictions.find(p => p.label === "Name")?.ocr_text || "",
@@ -193,7 +187,6 @@ router.post("/extract", auth, upload.single("resume"), async (req, res) => {
   }
 });
 
-// Unchanged /download endpoint
 router.get("/download", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -216,7 +209,6 @@ router.get("/download", auth, async (req, res) => {
   }
 });
 
-// Updated /analyze endpoint to use Gemini-powered analysis
 router.post("/analyze", auth, async (req, res) => {
   try {
     const { jobId, resume } = req.body;
@@ -232,11 +224,9 @@ router.post("/analyze", auth, async (req, res) => {
       return res.status(404).json({ msg: "Job not found" });
     }
 
-    // Decode base64 resume to text
     const resumeText = Buffer.from(resume, "base64").toString("utf-8");
     console.log("Decoded resume text (first 100 chars):", resumeText.substring(0, 100));
 
-    // Use Gemini-powered analysis
     const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
 
     console.log("Final analysis response sent to frontend:", JSON.stringify(analysisResult, null, 2));
@@ -250,6 +240,45 @@ router.post("/analyze", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("Error in /analyze:", err.message);
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+router.post("/analyze-draft", auth, async (req, res) => {
+  try {
+    const { jobId, resume } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    const job = await Job.findById(jobId);
+    if (!job) return res.status(404).json({ msg: "Job not found" });
+
+    const resumeText = typeof resume === "string" ? resume : JSON.stringify(resume);
+    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
+
+    res.json({
+      matchScore: analysisResult.score,
+      matchedSkills: analysisResult.matchedSkills,
+      missingSkills: analysisResult.missingSkills,
+      feedback: analysisResult.feedback,
+    });
+  } catch (err) {
+    console.error("Error in /analyze-draft:", err.message);
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+router.post("/save-draft", auth, async (req, res) => {
+  try {
+    const { resumeData } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: "User not found" });
+
+    user.resumeDraft = resumeData;
+    await user.save();
+    res.json({ msg: "Resume draft saved successfully" });
+  } catch (err) {
+    console.error("Error in /save-draft:", err.message);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });

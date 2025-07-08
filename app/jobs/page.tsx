@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import io from "socket.io-client";
+import ResumeBuilder from "@/components/ResumeBuilder";
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
@@ -26,6 +27,7 @@ export default function Jobs() {
   const [attachment, setAttachment] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [showResumeBuilder, setShowResumeBuilder] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -154,7 +156,6 @@ export default function Jobs() {
         if (!analyzeRes.ok) throw new Error(`Analysis failed: ${analyzeRes.status}`);
         const result = await analyzeRes.json();
         console.log("Frontend received analysis result:", JSON.stringify(result, null, 2));
-        // Enhance analysis by ensuring missing skills and feedback are populated
         if (!result.missingSkills || !result.feedback) {
           const job = jobs.find(j => j._id === jobId);
           const resumeSkills = result.extractedSkills || [];
@@ -334,6 +335,12 @@ export default function Jobs() {
                 >
                   {appliedJobs.includes(job._id) ? "Applied" : job.isClosed ? "Closed" : "Apply"}
                 </button>
+                <button
+                  onClick={() => setShowResumeBuilder(true)}
+                  className="text-sm px-4 py-2 rounded-lg bg-[#4a4a4a] text-white hover:bg-[#313131]"
+                >
+                  Build Resume
+                </button>
               </div>
             </div>
           ))}
@@ -510,6 +517,12 @@ export default function Jobs() {
             New message in chat {notif.chatId}
           </div>
         ))}
+
+        {showResumeBuilder && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <ResumeBuilder onClose={() => setShowResumeBuilder(false)} />
+          </div>
+        )}
       </main>
     </div>
   );

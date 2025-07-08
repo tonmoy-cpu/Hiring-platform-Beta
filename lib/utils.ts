@@ -23,3 +23,17 @@ export const domainOptions = [
   "Product Manager", "Project Manager", "QA Engineer", "Game Developer", "Blockchain Developer",
   "AI Engineer", "Embedded Systems Engineer", "Robotics Engineer", "Graphic Designer",
 ];
+
+export function formatResumeData(data: any) {
+  return JSON.stringify(data, null, 2);
+}
+
+export async function fetchResumeFeedback(token: string, jobId: string, resumeText: string) {
+  const res = await fetch(`http://localhost:5000/api/resume/analyze-draft`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ jobId, resume: resumeText }),
+  });
+  if (!res.ok) throw new Error("Failed to fetch feedback");
+  return res.json();
+}

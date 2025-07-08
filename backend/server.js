@@ -21,6 +21,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Ensure routes are loaded before catch-all
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/jobs", require("./routes/jobs"));
 app.use("/api/applications", require("./routes/applications"));
@@ -74,6 +75,7 @@ io.on("connection", (socket) => {
   });
 });
 
+// Move catch-all to the end to avoid intercepting valid routes
 app.use((req, res) => {
   console.log("Catch-all triggered for:", req.path);
   res.status(404).json({ msg: "Route not found" });
@@ -85,7 +87,7 @@ app.use((err, req, res, next) => {
 });
 
 // Validate environment variables
-const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "NANONETS_API_KEY", "NANONETS_MODEL_ID"];
+const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "NANONETS_API_KEY", "NANONETS_MODEL_ID", "HF_API_KEY", "GEMINI_API_KEY"];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     console.error(`Missing environment variable: ${envVar}`);

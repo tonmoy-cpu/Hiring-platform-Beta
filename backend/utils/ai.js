@@ -156,90 +156,90 @@ async function extractResumeDetails(resumeText) {
   }
 }
 
-// Updated function to analyze resume using Gemini API with refined prompt
+// Updated function to analyze resume using Gemini API with retry logic
 async function analyzeResumeWithGemini(resumeText, job) {
-  try {
-    const jobDescription = `
-      Title: ${job.title}
-      Details: ${job.details}
-      Skills: ${job.skills.join(", ")}
-      Salary: ${job.salary || "Not specified"}
-    `;
+  const maxRetries = 5;
+  const baseDelay = 2000; // 2 seconds initial delay
 
-    const prompt = `
-      You are an AI-powered resume analyzer for a hiring platform. Your task is to evaluate the provided resume against the job description to determine the candidate's eligibility. Ensure the response is a valid JSON object with the following fields:
-      - score: A numerical score (0-100) representing the candidate's eligibility for the job, based on skills match (50%), relevant experience (30%), and education/qualifications (20%).
-      - matchedSkills: An array of skills from the resume that match the job's required skills (case-insensitive). If no matches, return an empty array.
-      - missingSkills: An array of objects, each containing:
-        - skill: A job-required skill missing from the resume.
-        - suggestion: A brief suggestion on how to acquire the skill (e.g., "Take an online course on Coursera", "Build a project using this skill").
-        If no missing skills, return an empty array.
-      - feedback: An array of at least 3 detailed, actionable feedback points to improve the candidate's resume or application for this job. Each point should address specific gaps in skills, experience, or presentation (e.g., "Add quantifiable achievements to your experience section", "Include a project demonstrating [skill]"). If analysis fails, provide generic improvement suggestions.
-
-      Resume Text:
-      ${resumeText}
-
-      Job Description:
-      ${jobDescription}
-
-      Return the response in JSON format, wrapped in \`\`\`json\n and \n\`\`\`.
-    `;
-
-    console.log("Sending prompt to Gemini API:", prompt);
-
-    const response = await axios.post(
-      GEMINI_API_URL,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
-        },
-      }
-    );
-
-    const geminiResult = response.data.candidates[0].content.parts[0].text;
-    console.log("Raw Gemini response:", geminiResult);
-
-    let parsedResult;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      parsedResult = JSON.parse(geminiResult.replace(/```json\n|\n```/g, ""));
-    } catch (parseErr) {
-      console.error("Failed to parse Gemini response:", parseErr.message);
-      throw new Error("Invalid JSON response from Gemini");
+      const jobDescription = `
+        Title: ${job.title}
+        Details: ${job.details}
+        Skills: ${job.skills.join(", ")}
+        Salary: ${job.salary || "Not specified"}
+      `;
+
+      const prompt = `
+        You are an AI-powered resume analyzer for a hiring platform. Your task is to evaluate the provided resume against the job description to determine the candidate's eligibility. Ensure the response is a valid JSON object with the following fields:
+        - score: A numerical score (0-100) representing the candidate's eligibility for the job, based on skills match (50%), relevant experience (30%), and education/qualifications (20%).
+        - matchedSkills: An array of skills from the resume that match the job's required skills (case-insensitive). If no matches, return an empty array.
+        - missingSkills: An array of objects, each containing:
+          - skill: A job-required skill missing from the resume.
+          - suggestion: A brief suggestion on how to acquire the skill (e.g., "Take an online course on Coursera", "Build a project using this skill").
+          If no missing skills, return an empty array.
+        - feedback: An array of at least 3 detailed, actionable feedback points to improve the candidate's resume or application for this job. Each point should address specific gaps in skills, experience, or presentation (e.g., "Add quantifiable achievements to your experience section", "Include a project demonstrating [skill]"). If analysis fails, provide generic improvement suggestions.
+
+        Resume Text:
+        ${resumeText}
+
+        Job Description:
+        ${jobDescription}
+
+        Return the response in JSON format, wrapped in \`\`\`json\n and \n\`\`\`.
+      `;
+
+      console.log("Sending prompt to Gemini API (attempt " + attempt + "):", prompt);
+
+      const response = await axios.post(
+        GEMINI_API_URL,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": process.env.GEMINI_API_KEY,
+          },
+          timeout: 10000, // 10-second timeout
+        }
+      );
+
+      const geminiResult = response.data.candidates[0].content.parts[0].text;
+      console.log("Raw Gemini response:", geminiResult);
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(geminiResult.replace(/```json\n|\n```/g, ""));
+      } catch (parseErr) {
+        console.error("Failed to parse Gemini response:", parseErr.message);
+        throw new Error("Invalid JSON response from Gemini");
+      }
+
+      console.log("Parsed Gemini result:", parsedResult);
+
+      return {
+        score: parsedResult.score || 0,
+        matchedSkills: Array.isArray(parsedResult.matchedSkills) ? parsedResult.matchedSkills : [],
+        missingSkills: Array.isArray(parsedResult.missingSkills) ? parsedResult.missingSkills : [],
+        feedback: Array.isArray(parsedResult.feedback) ? parsedResult.feedback : [
+          "Ensure your resume includes specific projects related to the job's required skills.",
+          "Add quantifiable achievements to your experience section.",
+          "Consider tailoring your resume to highlight relevant qualifications."
+        ],
+      };
+    } catch (err) {
+      console.error("Error in analyzeResumeWithGemini (attempt " + attempt + "):", err.message, err.stack);
+      if (err.response?.status === 429 && attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Rate limit hit, retrying after ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
     }
-
-    console.log("Parsed Gemini result:", parsedResult);
-
-    // Validate and normalize response
-    return {
-      score: parsedResult.score || 0,
-      matchedSkills: Array.isArray(parsedResult.matchedSkills) ? parsedResult.matchedSkills : [],
-      missingSkills: Array.isArray(parsedResult.missingSkills) ? parsedResult.missingSkills : [],
-      feedback: Array.isArray(parsedResult.feedback) ? parsedResult.feedback : [
-        "Ensure your resume includes specific projects related to the job's required skills.",
-        "Add quantifiable achievements to your experience section.",
-        "Consider tailoring your resume to highlight relevant qualifications."
-      ],
-    };
-  } catch (err) {
-    console.error("Error in analyzeResumeWithGemini:", err.message, err.stack);
-    return {
-      score: 0,
-      matchedSkills: [],
-      missingSkills: job.skills.map(skill => ({
-        skill,
-        suggestion: "Consider taking an online course or building a project to gain this skill."
-      })),
-      feedback: [
-        "Unable to analyze resume due to an error. Ensure your resume is detailed and try again.",
-        "Include specific projects or experiences relevant to the job description.",
-        "Consider adding certifications or coursework to strengthen your application."
-      ],
-    };
   }
+  throw new Error("Max retries reached for Gemini API");
 }
 
 // Modified analyzeResumeAgainstJob to use Gemini for analysis
@@ -270,7 +270,7 @@ async function analyzeResumeAgainstJob(resumeText, job, candidateId) {
       score: 0,
       feedback: ["Error analyzing resume. Please ensure the resume is valid."],
       matchedSkills: [],
-      missingSkills: job.skills.map(skill => ({
+      missingSkills: job.skills.map((skill) => ({
         skill,
         suggestion: "Consider taking an online course or building a project to gain this skill."
       })),

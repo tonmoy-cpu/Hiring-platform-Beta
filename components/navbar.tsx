@@ -1,4 +1,3 @@
-// /app/components/Navbar.tsx
 "use client";
 
 import Link from "next/link";
@@ -143,6 +142,10 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
               <Link href="/track-applications" className="nav-link flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 <span>Applications</span>
+              </Link>
+              <Link href="/resume-builder" className="nav-link flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span>Resume Builder</span>
               </Link>
             </>
           ) : (
