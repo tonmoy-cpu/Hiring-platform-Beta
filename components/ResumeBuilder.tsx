@@ -18,7 +18,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     experience: [{ title: "", company: "", years: "" }],
     education: [{ degree: "", school: "", year: "" }],
   });
-  const [feedback, setFeedback] = useState({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
+  const [feedback, setFeedback] = useState({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
   const [selectedJobId, setSelectedJobId] = useState("");
   const [jobs, setJobs] = useState([]);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
@@ -46,7 +46,6 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     };
     fetchJobs();
 
-    // Cleanup debounced function on unmount
     return () => {
       if (debouncedFetchRef.current) {
         debouncedFetchRef.current.cancel();
@@ -58,26 +57,25 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     debounce(async (data) => {
       const token = localStorage.getItem("token");
       if (!token || !selectedJobId) return;
-      const resumeText = Buffer.from(JSON.stringify(data)).toString("base64"); // Ensure proper base64 encoding
+      const resumeText = Buffer.from(JSON.stringify(data)).toString("base64");
       try {
         const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
-        console.log("Fetched feedback in debounced (raw):", result);
         if (result && (typeof result.matchScore !== "undefined" || typeof result.score !== "undefined")) {
+          const job = jobs.find((j) => j._id === selectedJobId);
+          const normalizedResumeSkills = data.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative"));
+          const normalizedJobSkills = job?.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")) || [];
+          const atsScore = calculateATSScore(normalizedResumeSkills, normalizedJobSkills);
+          const atsFeedback = generateATSFeedback(normalizedResumeSkills, normalizedJobSkills);
           setFeedback({
             score: result.matchScore !== undefined ? result.matchScore : result.score,
-            matchedSkills: result.matchedSkills,
+            matchedSkills: [...new Set(result.matchedSkills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")))],
             missingSkills: result.missingSkills,
             feedback: result.feedback,
-          });
-          console.log("Feedback set in debounced:", {
-            score: result.matchScore !== undefined ? result.matchScore : result.score,
-            matchedSkills: result.matchedSkills,
-            missingSkills: result.missingSkills,
-            feedback: result.feedback,
+            atsScore,
+            atsFeedback,
           });
         } else {
-          console.warn("Invalid feedback result, missing score or matchScore:", result);
-          setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
+          setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
         }
       } catch (err) {
         console.error("Feedback error:", err.message);
@@ -86,10 +84,12 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
           matchedSkills: [],
           missingSkills: [{ skill: "N/A", suggestion: "API limit reached, try again later" }],
           feedback: ["Unable to fetch feedback due to API limits. Save your draft and retry."],
+          atsScore: 0,
+          atsFeedback: ["Error in ATS analysis. Ensure job is selected and resume is complete."],
         });
       }
     }, 3000),
-    [selectedJobId]
+    [selectedJobId, jobs]
   );
 
   useEffect(() => {
@@ -147,30 +147,28 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       toast.error("Please select a job and fill in the details.");
       return;
     }
-    // Cancel any pending debounced call to avoid race conditions
     if (debouncedFetchRef.current) {
       debouncedFetchRef.current.cancel();
     }
-    const resumeText = Buffer.from(JSON.stringify(resumeData)).toString("base64"); // Ensure proper base64 encoding
+    const resumeText = Buffer.from(JSON.stringify(resumeData)).toString("base64");
     try {
       const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
-      console.log("Analysis result in handleAnalyze (raw):", result);
+      const job = jobs.find((j) => j._id === selectedJobId);
+      const normalizedResumeSkills = resumeData.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative"));
+      const normalizedJobSkills = job?.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")) || [];
+      const atsScore = calculateATSScore(normalizedResumeSkills, normalizedJobSkills);
+      const atsFeedback = generateATSFeedback(normalizedResumeSkills, normalizedJobSkills);
       if (result && (typeof result.matchScore !== "undefined" || typeof result.score !== "undefined")) {
         setFeedback({
           score: result.matchScore !== undefined ? result.matchScore : result.score,
-          matchedSkills: result.matchedSkills,
+          matchedSkills: [...new Set(result.matchedSkills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")))],
           missingSkills: result.missingSkills,
           feedback: result.feedback,
-        });
-        console.log("Feedback set in handleAnalyze:", {
-          score: result.matchScore !== undefined ? result.matchScore : result.score,
-          matchedSkills: result.matchedSkills,
-          missingSkills: result.missingSkills,
-          feedback: result.feedback,
+          atsScore,
+          atsFeedback,
         });
       } else {
-        console.warn("Invalid analysis result, missing score or matchScore:", result);
-        setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
+        setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
       }
     } catch (err) {
       console.error("Analysis error:", err.message);
@@ -179,6 +177,8 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
         matchedSkills: [],
         missingSkills: [{ skill: "N/A", suggestion: "API limit reached or error occurred, try again later" }],
         feedback: ["Unable to fetch feedback due to an error. Save your draft and retry.", "Ensure all fields are filled.", "Check your internet connection."],
+        atsScore: 0,
+        atsFeedback: ["Error in ATS analysis. Ensure job is selected and resume is complete."],
       });
     }
   };
@@ -206,10 +206,29 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     }
   };
 
-  // Debug effect to monitor feedback state
   useEffect(() => {
     console.log("Feedback state updated:", feedback);
   }, [feedback]);
+
+  const calculateATSScore = (resumeSkills, jobSkills) => {
+    if (!jobSkills.length) return 0;
+    const matched = resumeSkills.filter(skill => jobSkills.includes(skill)).length;
+    return Math.min(Math.round((matched / jobSkills.length) * 100), 100); // Cap at 100%
+  };
+
+  const generateATSFeedback = (resumeSkills, jobSkills) => {
+    const missing = jobSkills.filter(skill => !resumeSkills.includes(skill));
+    const feedback = [];
+    if (missing.length > 0) {
+      feedback.push(`Add these missing skills to improve ATS compatibility: ${missing.join(", ")}.`);
+    }
+    if (resumeSkills.length === 0) {
+      feedback.push("Include at least some skills to pass ATS screening.");
+    } else if (feedback.length === 0) {
+      feedback.push(`Your resume is ${Math.max(feedback.atsScore || 0, 70) >= 70 ? "well-" : ""}aligned with ATS requirements for this job.`);
+    }
+    return feedback;
+  };
 
   return (
     <div className="bg-[#d9d9d9] p-6 rounded-lg shadow-lg w-full max-w-2xl relative h-[90vh] flex flex-col">
@@ -368,6 +387,13 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
               <li key={i}>{item}</li>
             ))}
           </ul>
+          <h3 className="text-[#313131] font-semibold mt-4">ATS Compatibility</h3>
+          <p>ATS Score: {feedback.atsScore || 0}%</p>
+          <ul className="list-disc pl-5">
+            {feedback.atsFeedback.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="mt-4 flex justify-end space-x-4">
@@ -384,6 +410,6 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
           Save
         </button>
       </div>
-  </div>
+    </div>
   );
 }
