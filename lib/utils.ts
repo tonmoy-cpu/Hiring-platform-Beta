@@ -29,11 +29,19 @@ export function formatResumeData(data: any) {
 }
 
 export async function fetchResumeFeedback(token: string, jobId: string, resumeText: string) {
-  const res = await fetch(`http://localhost:5000/api/resume/analyze-draft`, {
+  const res = await fetch(`http://localhost:5000/api/resume/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ jobId, resume: resumeText }),
   });
   if (!res.ok) throw new Error("Failed to fetch feedback");
-  return res.json();
+  const data = await res.json();
+  console.log("Raw API response in fetchResumeFeedback:", data);
+  // Map the response to match the feedback state structure, prioritizing matchScore if present
+  return {
+    score: data.matchScore !== undefined ? data.matchScore : (data.score || 0),
+    matchedSkills: data.matchedSkills || [],
+    missingSkills: data.missingSkills || [],
+    feedback: data.feedback || [],
+  };
 }

@@ -7,11 +7,11 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/
 
 // Common skills list (expanded as needed)
 const commonSkills = [
-  "javascript", "python", "java", "react", "node.js", "sql", "aws", "docker", "git", "html", "css",
+  "javascript", "python", "java", "react", "node", "sql", "aws", "docker", "git", "html", "css",
   "project management", "agile", "ux design", "figma", "typescript", "mongodb", "graphql",
-  "next.js", "react native", "django", "flask", "spring", "c#", ".net", "c++", "go", "ruby",
-  "rails", "php", "laravel", "angular", "vue.js", "svelte", "tailwind css", "bootstrap",
-  "postgresql", "mysql", "redis", "rest api", "azure", "google cloud", "kubernetes", "jenkins",
+  "next", "react native", "django", "flask", "spring", "c#", "net", "c++", "go", "ruby",
+  "rails", "php", "laravel", "angular", "vue", "svelte", "tailwind", "bootstrap",
+  "postgresql", "mysql", "redis", "rest", "azure", "google cloud", "kubernetes", "jenkins",
   "ci/cd", "machine learning", "tensorflow", "pytorch", "data analysis", "pandas", "numpy",
   "ui/ux design", "adobe xd", "sketch", "blockchain", "solidity", "cybersecurity",
 ];
@@ -26,12 +26,21 @@ function cleanText(text) {
     .filter((line) => line);
 }
 
-// Existing extractResumeDetails function (unchanged)
-async function extractResumeDetails(resumeText) {
+// Enhanced extractResumeDetails to handle pre-parsed data
+async function extractResumeDetails(resumeText, preParsedData = null) {
+  if (preParsedData && preParsedData.skills) {
+    console.log("Using pre-parsed resume data:", JSON.stringify(preParsedData, null, 2));
+    return {
+      contact: preParsedData.contact || { name: "Unknown", email: "N/A", phone: "N/A" },
+      skills: preParsedData.skills || [],
+      experience: preParsedData.experience || [],
+      education: preParsedData.education || [],
+    };
+  }
+
   try {
     const lines = cleanText(resumeText);
 
-    // Contact Info Extraction using AI and Heuristics
     const contactResult = await hf.tokenClassification({
       model: "dslim/bert-base-NER",
       inputs: resumeText,
@@ -45,15 +54,10 @@ async function extractResumeDetails(resumeText) {
     };
 
     const nameEntity = contactResult.find((e) => e.entity_group === "PER");
-    if (nameEntity) {
-      contact.name = nameEntity.word;
-    } else {
+    if (nameEntity) contact.name = nameEntity.word;
+    else {
       for (let i = 0; i < Math.min(5, lines.length); i++) {
-        if (
-          lines[i].length > 2 &&
-          !lines[i].includes("@") &&
-          !/\d{3}/.test(lines[i])
-        ) {
+        if (lines[i].length > 2 && !lines[i].includes("@") && !/\d{3}/.test(lines[i])) {
           contact.name = lines[i];
           break;
         }
@@ -67,24 +71,19 @@ async function extractResumeDetails(resumeText) {
       })
       .then((res) =>
         res
-          .filter((e) => e.entity_group === "SKILL" || e.score > 0.8)
-          .map((e) => e.word.toLowerCase())
+          .filter((e) => (e.entity_group === "SKILL" || e.score > 0.7) && e.word.length > 2)
+          .map((e) => e.word.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, ""))
       );
 
     const skillsFromText = lines
-      .flatMap((line) => line.toLowerCase().split(/[,;]/))
-      .map((skill) => skill.trim())
-      .filter((skill) => commonSkills.includes(skill) || skill.length > 2);
+      .flatMap((line) => line.toLowerCase().match(/\b\w+\b/g) || [])
+      .filter((word) => commonSkills.includes(word.replace(/\s+/g, "").replace(/\.?js$/, "")) || (word.length > 2 && !/^\d+$/.test(word)))
+      .map((word) => word.replace(/\s+/g, "").replace(/\.?js$/, ""));
 
     const skills = [...new Set([...skillsFromAI, ...skillsFromText])];
 
     const experience = [];
-    const expKeywords = [
-      "experience",
-      "work history",
-      "employment",
-      "professional experience",
-    ];
+    const expKeywords = ["experience", "work history", "employment", "professional experience"];
     let expSection = false;
     let currentExp = null;
 
@@ -93,10 +92,7 @@ async function extractResumeDetails(resumeText) {
         expSection = true;
         continue;
       }
-      if (
-        expSection &&
-        (line.toLowerCase().includes("education") || line.toLowerCase().includes("skills"))
-      ) {
+      if (expSection && (line.toLowerCase().includes("education") || line.toLowerCase().includes("skills"))) {
         expSection = false;
         continue;
       }
@@ -104,11 +100,17 @@ async function extractResumeDetails(resumeText) {
         const dateMatch = line.match(/(\d{4}\s*[-–—]\s*\d{4}|\d{4}\s*-\s*present)/i);
         if (dateMatch) {
           if (currentExp) experience.push(currentExp);
-          currentExp = { title: "", company: "", years: dateMatch[0] };
+          currentExp = { title: "", company: "", years: dateMatch[0], duration: 0 };
         } else if (currentExp && !currentExp.title) {
           const parts = line.split(/ at |, | - /i);
           currentExp.title = parts[0].trim();
           currentExp.company = parts[1]?.trim() || "Unknown";
+          const years = dateMatch ? dateMatch[0].match(/\d{4}/g) : [];
+          if (years.length > 1) {
+            const start = parseInt(years[0]);
+            const end = years[1] === "present" ? new Date().getFullYear() : parseInt(years[1]);
+            currentExp.duration = end - start;
+          }
         }
       }
     }
@@ -123,10 +125,7 @@ async function extractResumeDetails(resumeText) {
         eduSection = true;
         continue;
       }
-      if (
-        eduSection &&
-        (line.toLowerCase().includes("experience") || line.toLowerCase().includes("skills"))
-      ) {
+      if (eduSection && (line.toLowerCase().includes("experience") || line.toLowerCase().includes("skills"))) {
         eduSection = false;
         continue;
       }
@@ -139,6 +138,7 @@ async function extractResumeDetails(resumeText) {
             degree: degreeMatch ? parts[0].trim() : parts[0].trim(),
             school: parts[1]?.trim() || "Unknown",
             year: yearMatch ? yearMatch[0] : "N/A",
+            level: degreeMatch ? (degreeMatch[0].includes("ph.d.") ? 3 : degreeMatch[0].includes("m.s.") ? 2 : 1) : 0,
           });
         }
       }
@@ -156,52 +156,73 @@ async function extractResumeDetails(resumeText) {
   }
 }
 
-// Updated function to analyze resume using Gemini API with retry logic
-async function analyzeResumeWithGemini(resumeText, job) {
+// Enhanced computeScoreAndSkills for accurate results
+async function computeScoreAndSkills(resumeSkills, resumeExperience, resumeEducation, jobSkills) {
+  // Normalize skills: remove spaces, handle case, and .js variants
+  const normalizeSkill = (skill) =>
+    skill.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "");
+
+  const normalizedResumeSkills = resumeSkills.map(normalizeSkill);
+  const normalizedJobSkills = jobSkills.map(normalizeSkill);
+
+  console.log("Normalized Resume Skills:", normalizedResumeSkills); // Debug log
+  console.log("Normalized Job Skills:", normalizedJobSkills); // Debug log
+
+  // Match skills with fuzzy logic
+  const matchedSkills = normalizedResumeSkills.filter((resumeSkill) =>
+    normalizedJobSkills.some((jobSkill) =>
+      jobSkill === resumeSkill || (jobSkill.length > 2 && resumeSkill.includes(jobSkill)) || (resumeSkill.length > 2 && jobSkill.includes(resumeSkill))
+    )
+  );
+
+  // Identify missing skills based on jobSkills
+  const missingSkills = normalizedJobSkills.filter((jobSkill) =>
+    !normalizedResumeSkills.some((resumeSkill) =>
+      resumeSkill === jobSkill || resumeSkill.includes(jobSkill) || jobSkill.includes(resumeSkill)
+    )
+  ).map((skill) => ({
+    skill: skill.replace(/_/g, " "), // Restore readable format
+    suggestion: "Consider taking an online course or building a project to gain this skill.",
+  }));
+
+  // Detailed scoring
+  const skillsScore = (matchedSkills.length / Math.max(normalizedJobSkills.length, 1)) * 50;
+  const expScore = resumeExperience.reduce((sum, exp) => sum + (exp.duration || 0), 0) > 0 ? 30 : 0;
+  const eduScore = Math.max(...resumeEducation.map(e => e.level)) > 0 ? 20 : 0;
+  const score = Math.min(Math.max(skillsScore + expScore + eduScore, 0), 100);
+
+  console.log("Computed - Score:", score, "Matched Skills:", matchedSkills, "Missing Skills:", missingSkills);
+  return { score, matchedSkills, missingSkills };
+}
+
+// Updated analyzeResumeWithGemini for feedback only
+async function analyzeResumeWithGemini(resumeText, job, preParsedData = null) {
   const maxRetries = 5;
-  const baseDelay = 2000; // 2 seconds initial delay
+  const baseDelay = 5000;
+  const maxPromptSize = 2000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const jobDescription = `
-        Title: ${job.title}
-        Details: ${job.details}
-        Skills: ${job.skills.join(", ")}
-        Salary: ${job.salary || "Not specified"}
-      `;
-
+      const { skills, experience, education } = preParsedData || (await extractResumeDetails(resumeText));
       const prompt = `
-        You are an AI-powered resume analyzer for a hiring platform. Your task is to evaluate the provided resume against the job description to determine the candidate's eligibility. Ensure the response is a valid JSON object with the following fields:
-        - score: A numerical score (0-100) representing the candidate's eligibility for the job, based on skills match (50%), relevant experience (30%), and education/qualifications (20%).
-        - matchedSkills: An array of skills from the resume that match the job's required skills (case-insensitive). If no matches, return an empty array.
-        - missingSkills: An array of objects, each containing:
-          - skill: A job-required skill missing from the resume.
-          - suggestion: A brief suggestion on how to acquire the skill (e.g., "Take an online course on Coursera", "Build a project using this skill").
-          If no missing skills, return an empty array.
-        - feedback: An array of at least 3 detailed, actionable feedback points to improve the candidate's resume or application for this job. Each point should address specific gaps in skills, experience, or presentation (e.g., "Add quantifiable achievements to your experience section", "Include a project demonstrating [skill]"). If analysis fails, provide generic improvement suggestions.
-
-        Resume Text:
-        ${resumeText}
-
-        Job Description:
-        ${jobDescription}
-
-        Return the response in JSON format, wrapped in \`\`\`json\n and \n\`\`\`.
+        You are an AI-powered resume analyzer. Provide 3 concise, actionable feedback points to improve the resume for the job based on skills: ${job.skills.join(", ")}, experience titles: ${experience.map(e => e.title).join(", ")}, and education: ${education.map(e => e.degree).join(", ")}. Job title: ${job.title}.
+        Return JSON with a 'feedback' array wrapped in \`\`\`json\n and \n\`\`\`.
       `;
 
-      console.log("Sending prompt to Gemini API (attempt " + attempt + "):", prompt);
+      const truncatedPrompt = prompt.length > maxPromptSize ? prompt.substring(0, maxPromptSize) + "..." : prompt;
+      console.log("Sending feedback prompt to Gemini API (attempt " + attempt + ", size: " + truncatedPrompt.length + " chars):", truncatedPrompt.substring(0, 200) + "...");
 
       const response = await axios.post(
         GEMINI_API_URL,
         {
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts: [{ text: truncatedPrompt }] }],
         },
         {
           headers: {
             "Content-Type": "application/json",
             "x-goog-api-key": process.env.GEMINI_API_KEY,
           },
-          timeout: 10000, // 10-second timeout
+          timeout: 30000,
         }
       );
 
@@ -216,39 +237,40 @@ async function analyzeResumeWithGemini(resumeText, job) {
         throw new Error("Invalid JSON response from Gemini");
       }
 
-      console.log("Parsed Gemini result:", parsedResult);
-
-      return {
-        score: parsedResult.score || 0,
-        matchedSkills: Array.isArray(parsedResult.matchedSkills) ? parsedResult.matchedSkills : [],
-        missingSkills: Array.isArray(parsedResult.missingSkills) ? parsedResult.missingSkills : [],
-        feedback: Array.isArray(parsedResult.feedback) ? parsedResult.feedback : [
-          "Ensure your resume includes specific projects related to the job's required skills.",
-          "Add quantifiable achievements to your experience section.",
-          "Consider tailoring your resume to highlight relevant qualifications."
-        ],
-      };
+      console.log("Parsed Gemini feedback:", parsedResult);
+      return { feedback: Array.isArray(parsedResult.feedback) ? parsedResult.feedback : [] };
     } catch (err) {
       console.error("Error in analyzeResumeWithGemini (attempt " + attempt + "):", err.message, err.stack);
-      if (err.response?.status === 429 && attempt < maxRetries) {
+      if ((err.code === "ECONNABORTED" || err.response?.status === 503 || err.response?.status === 429) && attempt < maxRetries) {
         const delay = baseDelay * Math.pow(2, attempt - 1);
-        console.log(`Rate limit hit, retrying after ${delay}ms...`);
+        console.log(`Retrying due to ${err.code === "ECONNABORTED" ? "timeout" : err.response?.status === 503 ? "service unavailable" : "rate limit"}, waiting ${delay}ms...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw err;
     }
   }
-  throw new Error("Max retries reached for Gemini API");
+  console.warn("Max retries reached for Gemini API, skipping feedback.");
+  return { feedback: [] };
 }
 
-// Modified analyzeResumeAgainstJob to use Gemini for analysis
-async function analyzeResumeAgainstJob(resumeText, job, candidateId) {
+// Modified analyzeResumeAgainstJob to handle pre-parsed data
+async function analyzeResumeAgainstJob(resumeText, job, candidateId, preParsedData = null) {
   try {
-    // Use Gemini for analysis
-    const geminiResult = await analyzeResumeWithGemini(resumeText, job);
+    const { skills, experience, education } = preParsedData || (await extractResumeDetails(resumeText, preParsedData));
+    const { score, matchedSkills, missingSkills } = await computeScoreAndSkills(skills, experience, education, job.skills);
 
-    // If candidateId is provided, fetch skills for logging purposes
+    let feedback = ["Ensure your resume includes relevant skills.", "Add quantifiable achievements.", "Tailor your experience to the job."];
+    try {
+      const geminiResult = await analyzeResumeWithGemini(resumeText, job, preParsedData);
+      if (geminiResult.feedback.length > 0) {
+        feedback = geminiResult.feedback;
+        console.log("Successfully integrated Gemini feedback:", feedback);
+      }
+    } catch (geminiErr) {
+      console.warn("Gemini failed, using fallback feedback:", geminiErr.message);
+    }
+
     let normalizedSkills = [];
     if (candidateId) {
       const user = await User.findById(candidateId).select("resumeParsed.skills");
@@ -257,22 +279,20 @@ async function analyzeResumeAgainstJob(resumeText, job, candidateId) {
       normalizedSkills = (user.resumeParsed?.skills || []).map((s) => s.toLowerCase());
     } else {
       console.log("No candidateId provided, extracting skills from resumeText");
-      const { skills } = await extractResumeDetails(resumeText);
       normalizedSkills = skills.map((s) => s.toLowerCase());
     }
 
-    console.log("Gemini analysis result:", geminiResult);
-
-    return geminiResult;
+    console.log("Final analysis result:", { score, matchedSkills, missingSkills, feedback });
+    return { score, matchedSkills, missingSkills, feedback };
   } catch (err) {
     console.error("Error in analyzeResumeAgainstJob:", err.message, err.stack);
     return {
       score: 0,
-      feedback: ["Error analyzing resume. Please ensure the resume is valid."],
+      feedback: ["Error analyzing resume. Please ensure the resume is valid and retry after some time."],
       matchedSkills: [],
       missingSkills: job.skills.map((skill) => ({
         skill,
-        suggestion: "Consider taking an online course or building a project to gain this skill."
+        suggestion: "Consider taking an online course or building a project to gain this skill.",
       })),
     };
   }

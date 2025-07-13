@@ -9,6 +9,7 @@ const path = require("path");
 const multer = require("multer");
 const FormData = require("form-data");
 const { analyzeResumeAgainstJob } = require("../utils/ai");
+const jwt = require("jsonwebtoken");
 
 const uploadDir = path.join(__dirname, "../../Uploads/resumes");
 fs.mkdir(uploadDir, { recursive: true })
@@ -54,7 +55,7 @@ const MAX_RETRIES = 3;
 const BASE_DELAY = 1000; // 1 second
 
 async function makeNanonetsRequest(formData, filename) {
-  console.log("Nanonets request - Filename:", filename, "Content-Type:", formData.getHeaders()['content-type']);
+  console.log("Nanonets request - Filename:", filename, "Content-Type:", formData.getHeaders()["content-type"]);
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await axios.post(NANONETS_API_URL, formData, {
@@ -209,6 +210,21 @@ router.get("/download", auth, async (req, res) => {
   }
 });
 
+router.get("/get-draft", async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.user.id).select("resumeParsed");
+    if (!user || !user.resumeParsed) {
+      return res.status(404).json({ msg: "No draft found." });
+    }
+    res.status(200).json({ resumeData: user.resumeParsed });
+  } catch (err) {
+    console.error("Error fetching draft:", err);
+    res.status(500).json({ msg: "Server error while fetching draft." });
+  }
+});
+
 router.post("/analyze", auth, async (req, res) => {
   try {
     const { jobId, resume } = req.body;
@@ -224,10 +240,26 @@ router.post("/analyze", auth, async (req, res) => {
       return res.status(404).json({ msg: "Job not found" });
     }
 
-    const resumeText = Buffer.from(resume, "base64").toString("utf-8");
-    console.log("Decoded resume text (first 100 chars):", resumeText.substring(0, 100));
+    // Debug job skills
+    console.log("Job found - ID:", jobId, "Title:", job.title, "Skills:", job.skills);
 
-    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
+    // Decode and parse resume data
+    let resumeData;
+    try {
+      const decodedResume = Buffer.from(resume, "base64").toString("utf-8");
+      console.log("Raw decoded resume (first 200 chars):", decodedResume.substring(0, 200)); // Debug raw input
+      resumeData = JSON.parse(decodedResume);
+    } catch (parseErr) {
+      console.error("Failed to parse resume JSON:", parseErr.message, "Raw data:", resume.substring(0, 200));
+      return res.status(400).json({ msg: "Invalid resume data format", error: parseErr.message });
+    }
+
+    // Extract skills and other fields for analysis
+    const resumeText = resumeData.skills ? resumeData.skills.join("\n") : "";
+    const experience = resumeData.experience || [];
+    const education = resumeData.education || [];
+
+    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id, { skills: resumeData.skills, experience, education });
 
     console.log("Final analysis response sent to frontend:", JSON.stringify(analysisResult, null, 2));
 
@@ -239,8 +271,8 @@ router.post("/analyze", auth, async (req, res) => {
       resumeData: user.resumeParsed,
     });
   } catch (err) {
-    console.error("Error in /analyze:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    console.error("Error in /analyze route:", err.message, err.stack);
+    res.status(500).json({ msg: "Error analyzing resume", error: err.message });
   }
 });
 
@@ -253,8 +285,25 @@ router.post("/analyze-draft", auth, async (req, res) => {
     const job = await Job.findById(jobId);
     if (!job) return res.status(404).json({ msg: "Job not found" });
 
-    const resumeText = typeof resume === "string" ? resume : JSON.stringify(resume);
-    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
+    // Debug job skills
+    console.log("Job found - ID:", jobId, "Title:", job.title, "Skills:", job.skills);
+
+    // Decode and parse resume data
+    let resumeData;
+    try {
+      const decodedResume = Buffer.from(resume, "base64").toString("utf-8");
+      console.log("Raw decoded resume (first 200 chars):", decodedResume.substring(0, 200)); // Debug raw input
+      resumeData = JSON.parse(decodedResume);
+    } catch (parseErr) {
+      console.error("Failed to parse resume JSON:", parseErr.message, "Raw data:", resume.substring(0, 200));
+      return res.status(400).json({ msg: "Invalid resume data format", error: parseErr.message });
+    }
+
+    const resumeText = resumeData.skills ? resumeData.skills.join("\n") : "";
+    const experience = resumeData.experience || [];
+    const education = resumeData.education || [];
+
+    const analysisResult = await analyzeResumeAgainstJob(resumeText, job, req.user.id, { skills: resumeData.skills, experience, education });
 
     res.json({
       matchScore: analysisResult.score,
@@ -263,7 +312,7 @@ router.post("/analyze-draft", auth, async (req, res) => {
       feedback: analysisResult.feedback,
     });
   } catch (err) {
-    console.error("Error in /analyze-draft:", err.message);
+    console.error("Error in /analyze-draft:", err.message, err.stack);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
@@ -278,7 +327,7 @@ router.post("/save-draft", auth, async (req, res) => {
     await user.save();
     res.json({ msg: "Resume draft saved successfully" });
   } catch (err) {
-    console.error("Error in /save-draft:", err.message);
+    console.error("Error in /save-draft:", err.message, err.stack);
     res.status(500).json({ msg: "Server error", error: err.message });
   }
 });

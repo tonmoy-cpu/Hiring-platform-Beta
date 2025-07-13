@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { skillOptions, domainOptions, fetchResumeFeedback } from "@/lib/utils";
+import { debounce } from "lodash";
+import { fetchDraft } from "@/lib/draftUtils";
 
 interface ResumeBuilderProps {
   onClose: () => void;
@@ -19,7 +21,9 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
   const [feedback, setFeedback] = useState({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
   const [selectedJobId, setSelectedJobId] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const router = useRouter();
+  const debouncedFetchRef = useRef<any>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -41,7 +45,56 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       }
     };
     fetchJobs();
+
+    // Cleanup debounced function on unmount
+    return () => {
+      if (debouncedFetchRef.current) {
+        debouncedFetchRef.current.cancel();
+      }
+    };
   }, [router]);
+
+  const debouncedFetchFeedback = useCallback(
+    debounce(async (data) => {
+      const token = localStorage.getItem("token");
+      if (!token || !selectedJobId) return;
+      const resumeText = Buffer.from(JSON.stringify(data)).toString("base64"); // Ensure proper base64 encoding
+      try {
+        const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
+        console.log("Fetched feedback in debounced (raw):", result);
+        if (result && (typeof result.matchScore !== "undefined" || typeof result.score !== "undefined")) {
+          setFeedback({
+            score: result.matchScore !== undefined ? result.matchScore : result.score,
+            matchedSkills: result.matchedSkills,
+            missingSkills: result.missingSkills,
+            feedback: result.feedback,
+          });
+          console.log("Feedback set in debounced:", {
+            score: result.matchScore !== undefined ? result.matchScore : result.score,
+            matchedSkills: result.matchedSkills,
+            missingSkills: result.missingSkills,
+            feedback: result.feedback,
+          });
+        } else {
+          console.warn("Invalid feedback result, missing score or matchScore:", result);
+          setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
+        }
+      } catch (err) {
+        console.error("Feedback error:", err.message);
+        setFeedback({
+          score: 0,
+          matchedSkills: [],
+          missingSkills: [{ skill: "N/A", suggestion: "API limit reached, try again later" }],
+          feedback: ["Unable to fetch feedback due to API limits. Save your draft and retry."],
+        });
+      }
+    }, 3000),
+    [selectedJobId]
+  );
+
+  useEffect(() => {
+    debouncedFetchRef.current = debouncedFetchFeedback;
+  }, [debouncedFetchFeedback]);
 
   const handleChange = (section, index, field, value) => {
     const newData = { ...resumeData };
@@ -54,12 +107,18 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       newData[section][field] = value;
     }
     setResumeData(newData);
+    if (debouncedFetchRef.current) {
+      debouncedFetchRef.current(newData);
+    }
   };
 
   const addSection = (section) => {
     const newData = { ...resumeData };
     newData[section].push(section === "experience" ? { title: "", company: "", years: "" } : { degree: "", school: "", year: "" });
     setResumeData(newData);
+    if (debouncedFetchRef.current) {
+      debouncedFetchRef.current(newData);
+    }
   };
 
   const handleSave = async () => {
@@ -88,20 +147,69 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       toast.error("Please select a job and fill in the details.");
       return;
     }
-    const resumeText = JSON.stringify(resumeData);
+    // Cancel any pending debounced call to avoid race conditions
+    if (debouncedFetchRef.current) {
+      debouncedFetchRef.current.cancel();
+    }
+    const resumeText = Buffer.from(JSON.stringify(resumeData)).toString("base64"); // Ensure proper base64 encoding
     try {
       const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
-      setFeedback(result);
+      console.log("Analysis result in handleAnalyze (raw):", result);
+      if (result && (typeof result.matchScore !== "undefined" || typeof result.score !== "undefined")) {
+        setFeedback({
+          score: result.matchScore !== undefined ? result.matchScore : result.score,
+          matchedSkills: result.matchedSkills,
+          missingSkills: result.missingSkills,
+          feedback: result.feedback,
+        });
+        console.log("Feedback set in handleAnalyze:", {
+          score: result.matchScore !== undefined ? result.matchScore : result.score,
+          matchedSkills: result.matchedSkills,
+          missingSkills: result.missingSkills,
+          feedback: result.feedback,
+        });
+      } else {
+        console.warn("Invalid analysis result, missing score or matchScore:", result);
+        setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [] });
+      }
     } catch (err) {
       console.error("Analysis error:", err.message);
       setFeedback({
         score: 0,
         matchedSkills: [],
-        missingSkills: [{ skill: "N/A", suggestion: "API limit reached, try again later" }],
-        feedback: ["Unable to fetch feedback due to API limits. Save your draft and retry."],
+        missingSkills: [{ skill: "N/A", suggestion: "API limit reached or error occurred, try again later" }],
+        feedback: ["Unable to fetch feedback due to an error. Save your draft and retry.", "Ensure all fields are filled.", "Check your internet connection."],
       });
     }
   };
+
+  const handleLoadDraft = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please log in to load a draft.");
+      return;
+    }
+    setIsLoadingDraft(true);
+    try {
+      const savedData = await fetchDraft(token);
+      if (savedData) {
+        setResumeData(savedData);
+        toast.success("Draft loaded successfully!");
+      } else {
+        toast.info("No draft found. Starting with a new resume.");
+      }
+    } catch (err) {
+      console.error("Draft load error:", err.message);
+      toast.error("Failed to load draft. Please try again.");
+    } finally {
+      setIsLoadingDraft(false);
+    }
+  };
+
+  // Debug effect to monitor feedback state
+  useEffect(() => {
+    console.log("Feedback state updated:", feedback);
+  }, [feedback]);
 
   return (
     <div className="bg-[#d9d9d9] p-6 rounded-lg shadow-lg w-full max-w-2xl relative h-[90vh] flex flex-col">
@@ -236,12 +344,19 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
         <div>
           <button
             onClick={handleAnalyze}
-            className="bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a]"
+            className="bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a] mr-2"
           >
             Analyze Resume
           </button>
+          <button
+            onClick={handleLoadDraft}
+            disabled={isLoadingDraft}
+            className="bg-[#4a4a4a] text-white px-4 py-2 rounded hover:bg-[#313131] disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isLoadingDraft ? "Loading..." : "Load Draft"}
+          </button>
           <h3 className="text-[#313131] font-semibold mt-4">Feedback</h3>
-          <p>Score: {feedback.score}%</p>
+          <p>Score: {feedback.score || 0}%</p>
           <p>Matched Skills: {feedback.matchedSkills.join(", ") || "None"}</p>
           <ul className="list-disc pl-5">
             {feedback.missingSkills.map((skill, i) => (
@@ -269,6 +384,6 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
           Save
         </button>
       </div>
-    </div>
+  </div>
   );
 }
