@@ -1,3 +1,4 @@
+// backend/models/Application.js
 const mongoose = require("mongoose");
 
 const applicationSchema = new mongoose.Schema({
@@ -10,7 +11,7 @@ const applicationSchema = new mongoose.Schema({
     enum: ["Applied", "Under Review", "Selected", "Not Selected"],
     default: "Applied",
   },
-  feedback: { type: String },
+  feedback: { type: [String], default: [] }, // Changed to [String] to accept an array
   compatibilityScore: { type: Number },
   createdAt: { type: Date, default: Date.now },
 });

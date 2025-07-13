@@ -1,3 +1,4 @@
+// backend/routes/applications.js
 const express = require("express");
 const router = express.Router();
 const Application = require("../models/Application");
@@ -21,6 +22,9 @@ router.post("/apply", auth, async (req, res) => {
 
     const { score, feedback } = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
 
+    // Ensure feedback is an array
+    const feedbackArray = Array.isArray(feedback) ? feedback : [feedback || ""];
+
     const application = new Application({
       candidate: req.user.id,
       job: jobId,
@@ -28,17 +32,22 @@ router.post("/apply", auth, async (req, res) => {
       coverLetter,
       status: "Applied",
       compatibilityScore: score,
-      feedback,
+      feedback: feedbackArray, // Use the processed feedback array
     });
     await application.save();
 
     const updatedUser = await User.findById(req.user.id);
     console.log("After apply - User resumeParsed:", updatedUser.resumeParsed);
 
-    res.status(201).json(application);
+    // Update job's applicant counts (if not handled elsewhere)
+    await Job.findByIdAndUpdate(jobId, {
+      $inc: { applicantsCount: 1, newApplicantsCount: 1 },
+    });
+
+    res.status(201).json({ msg: "Application submitted successfully", application });
   } catch (err) {
     console.error("Error in /apply:", err.message, err.stack);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ msg: `Application submission failed: ${err.message}` });
   }
 });
 

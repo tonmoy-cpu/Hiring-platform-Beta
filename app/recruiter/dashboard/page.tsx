@@ -52,14 +52,20 @@ export default function RecruiterDashboard() {
       }
       const data = await res.json();
       setJobs(data);
-      
-      // Calculate dashboard stats
+
+      // Calculate dashboard stats with fallback to fetch applicant counts if not present
       const activeJobs = data.filter(job => !job.isClosed).length;
+      const totalApplicants = data.reduce((sum, job) => {
+        return sum + (job.applicantsCount || job.applicants?.length || 0);
+      }, 0);
+      const newApplicants = data.reduce((sum, job) => {
+        return sum + (job.newApplicantsCount || job.applicants?.filter(app => app.isNew).length || 0);
+      }, 0);
       setStats({
         totalJobs: data.length,
         activeJobs: activeJobs,
-        totalApplicants: data.reduce((sum, job) => sum + (job.applicantsCount || 0), 0),
-        newApplicants: data.reduce((sum, job) => sum + (job.newApplicantsCount || 0), 0)
+        totalApplicants: totalApplicants,
+        newApplicants: newApplicants
       });
     } catch (err) {
       console.error("Fetch error:", err);
