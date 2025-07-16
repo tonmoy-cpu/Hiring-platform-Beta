@@ -85,7 +85,15 @@ router.get("/recruiter", auth, async (req, res) => {
     return res.status(403).json({ msg: "Not authorized" });
 
   try {
-    const jobs = await Job.find({ recruiter: req.user.id }).populate("recruiter", "username");
+    const jobs = await Job.find({ recruiter: req.user.id }).lean();
+
+    // Calculate or populate applicant counts
+    for (let job of jobs) {
+      const applications = await Application.find({ job: job._id, status: { $ne: "Not Selected" } });
+      job.applicantsCount = job.applicantsCount || applications.length; // Use stored or calculate
+      job.newApplicantsCount = job.newApplicantsCount || applications.filter(app => app.status === "Applied").length; // Use stored or calculate based on "Applied" status
+    }
+
     res.json(jobs);
   } catch (err) {
     console.error("Error in GET /jobs/recruiter:", err);

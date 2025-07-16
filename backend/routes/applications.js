@@ -1,4 +1,3 @@
-// backend/routes/applications.js
 const express = require("express");
 const router = express.Router();
 const Application = require("../models/Application");
@@ -21,8 +20,6 @@ router.post("/apply", auth, async (req, res) => {
     console.log("Before apply - User resumeParsed:", user.resumeParsed);
 
     const { score, feedback } = await analyzeResumeAgainstJob(resumeText, job, req.user.id);
-
-    // Ensure feedback is an array
     const feedbackArray = Array.isArray(feedback) ? feedback : [feedback || ""];
 
     const application = new Application({
@@ -32,17 +29,23 @@ router.post("/apply", auth, async (req, res) => {
       coverLetter,
       status: "Applied",
       compatibilityScore: score,
-      feedback: feedbackArray, // Use the processed feedback array
+      feedback: feedbackArray,
     });
     await application.save();
 
     const updatedUser = await User.findById(req.user.id);
     console.log("After apply - User resumeParsed:", updatedUser.resumeParsed);
 
-    // Update job's applicant counts (if not handled elsewhere)
-    await Job.findByIdAndUpdate(jobId, {
-      $inc: { applicantsCount: 1, newApplicantsCount: 1 },
-    });
+    // Update job applicant counts
+    const jobUpdate = await Job.findByIdAndUpdate(
+      jobId,
+      {
+        $inc: { applicantsCount: 1, newApplicantsCount: 1 },
+        $push: { applicants: application._id }, // Optional, if using applicants array
+      },
+      { new: true, runValidators: true }
+    );
+    if (!jobUpdate) throw new Error("Failed to update job applicant counts");
 
     res.status(201).json({ msg: "Application submitted successfully", application });
   } catch (err) {
@@ -126,6 +129,12 @@ router.put("/:id/status", auth, async (req, res) => {
     application.status = status;
     await application.save();
     console.log("Status updated to:", status);
+
+    // Optionally decrement newApplicantsCount if status changes from "Applied"
+    if (application.status === "Applied" && status !== "Applied") {
+      await Job.findByIdAndUpdate(application.job, { $inc: { newApplicantsCount: -1 } });
+    }
+
     res.status(200).json(application);
   } catch (err) {
     console.error("Error in /status:", err.message, err.stack);

@@ -53,14 +53,10 @@ export default function RecruiterDashboard() {
       const data = await res.json();
       setJobs(data);
 
-      // Calculate dashboard stats with fallback to fetch applicant counts if not present
+      // Calculate dashboard stats
       const activeJobs = data.filter(job => !job.isClosed).length;
-      const totalApplicants = data.reduce((sum, job) => {
-        return sum + (job.applicantsCount || job.applicants?.length || 0);
-      }, 0);
-      const newApplicants = data.reduce((sum, job) => {
-        return sum + (job.newApplicantsCount || job.applicants?.filter(app => app.isNew).length || 0);
-      }, 0);
+      const totalApplicants = data.reduce((sum, job) => sum + (job.applicantsCount || 0), 0);
+      const newApplicants = data.reduce((sum, job) => sum + (job.newApplicantsCount || 0), 0);
       setStats({
         totalJobs: data.length,
         activeJobs: activeJobs,
@@ -115,7 +111,6 @@ export default function RecruiterDashboard() {
         throw new Error(errorData.msg || "Failed to close job");
       }
       
-      // Update the job in the local state instead of removing it
       setJobs((prev) => prev.map(job => 
         job._id === jobId ? {...job, isClosed: true} : job
       ));

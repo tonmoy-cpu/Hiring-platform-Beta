@@ -8,6 +8,9 @@ const jobSchema = new mongoose.Schema({
   recruiter: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   isClosed: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
+  applicantsCount: { type: Number, default: 0 }, // Added to track total applicants
+  newApplicantsCount: { type: Number, default: 0 }, // Added to track new applicants
+  applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "Application" }], // Optional, for reference
 });
 
 module.exports = mongoose.model("Job", jobSchema);
