@@ -1,15 +1,16 @@
-// /app/resume-extraction/page.tsx
 "use client";
 
 import Navbar from "@/components/navbar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function ResumeExtraction() {
   const [resumeFile, setResumeFile] = useState(null);
   const [parsedData, setParsedData] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // Added loading state
+  const [isLoading, setIsLoading] = useState(false);
+  const [jobId, setJobId] = useState(""); // Add job ID state
   const router = useRouter();
 
   const handleFileChange = (e) => {
@@ -23,8 +24,8 @@ export default function ResumeExtraction() {
       return;
     }
 
-    setIsLoading(true); // Set loading state
-    setError(null); // Reset error
+    setIsLoading(true);
+    setError(null);
     const formData = new FormData();
     formData.append("resume", resumeFile);
 
@@ -37,15 +38,43 @@ export default function ResumeExtraction() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.msg || "Extraction failed");
-      setParsedData(data.parsedData); // Set only parsedData
+      setParsedData(data.parsedData);
       showToast("Resume parsed and added to your profile!");
-      setTimeout(() => router.push("/profile"), 2000);
     } catch (err) {
       console.error("Error extracting resume:", err.message);
       setError(err.message);
       showToast(`Error: ${err.message}`);
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!jobId || !parsedData) {
+      showToast("Please enter a job ID and extract a resume first.");
+      return;
+    }
+
+    const resumeJson = JSON.stringify(parsedData);
+    const base64Resume = Buffer.from(resumeJson).toString("base64");
+
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/resume/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ jobId, resume: base64Resume }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      showToast("Resume analyzed successfully!");
+      console.log("Analysis result:", data); // Display or handle result (e.g., modal)
+    } catch (err) {
+      console.error("Analysis failed:", err.message);
+      showToast(`Analysis failed: ${err.message}`);
     }
   };
 
@@ -57,19 +86,21 @@ export default function ResumeExtraction() {
           <h1 className="text-3xl font-semibold text-center uppercase text-white">Resume Extraction</h1>
         </div>
         <div className="bg-[#d9d9d9] p-8 rounded-lg shadow-md">
-          <label htmlFor="resume" className="block text-[#313131] font-semibold mb-2">Upload Resume (PDF)</label>
+          <label htmlFor="resume" className="block text-[#313131] font-semibold mb-2">
+            Upload Resume (PDF)
+          </label>
           <input
             type="file"
             id="resume"
             accept=".pdf"
             onChange={handleFileChange}
             className="w-full p-2 rounded-lg border border-[#313131] text-[#313131]"
-            disabled={isLoading} // Disable input during loading
+            disabled={isLoading}
           />
           <button
             onClick={handleExtract}
             className="submit-button mt-4"
-            disabled={isLoading} // Disable button during loading
+            disabled={isLoading}
           >
             {isLoading ? "Extracting..." : "Extract"}
           </button>
@@ -90,33 +121,47 @@ export default function ResumeExtraction() {
               <div>
                 <h3 className="font-bold">Skills</h3>
                 <ul className="list-disc pl-4">
-                  {parsedData.skills?.length > 0 ? parsedData.skills.map((s, i) => <li key={i}>{s || "N/A"}</li>) : <li>N/A</li>}
+                  {parsedData.skills?.length > 0
+                    ? parsedData.skills.map((s, i) => <li key={i}>{s || "N/A"}</li>)
+                    : <li>N/A</li>}
                 </ul>
               </div>
               <div>
                 <h3 className="font-bold">Experience</h3>
-                {parsedData.experience?.length > 0 ? (
-                  parsedData.experience.map((e, i) => (
-                    <p key={i}>
-                      {e.title || "N/A"} at {e.company || "N/A"} ({e.years || "N/A"})
-                    </p>
-                  ))
-                ) : (
-                  <p>N/A</p>
-                )}
+                {parsedData.experience?.length > 0
+                  ? parsedData.experience.map((e, i) => (
+                      <p key={i}>
+                        {e.title || "N/A"} at {e.company || "N/A"} ({e.years || "N/A"})
+                      </p>
+                    ))
+                  : <p>N/A</p>}
               </div>
               <div>
                 <h3 className="font-bold">Education</h3>
-                {parsedData.education?.length > 0 ? (
-                  parsedData.education.map((e, i) => (
-                    <p key={i}>
-                      {e.degree || "N/A"}, {e.school || "N/A"} ({e.year || "N/A"})
-                    </p>
-                  ))
-                ) : (
-                  <p>N/A</p>
-                )}
+                {parsedData.education?.length > 0
+                  ? parsedData.education.map((e, i) => (
+                      <p key={i}>
+                        {e.degree || "N/A"}, {e.school || "N/A"} ({e.year || "N/A"})
+                      </p>
+                    ))
+                  : <p>N/A</p>}
               </div>
+            </div>
+            <div className="mt-4">
+              <input
+                type="text"
+                value={jobId}
+                onChange={(e) => setJobId(e.target.value)}
+                placeholder="Enter Job ID to Analyze"
+                className="w-full p-2 rounded-lg border border-[#313131] text-[#313131] mb-2"
+              />
+              <button
+                onClick={handleAnalyze}
+                className="submit-button mt-2"
+                disabled={isLoading}
+              >
+                Analyze Resume
+              </button>
             </div>
           </div>
         )}
