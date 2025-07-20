@@ -8,9 +8,9 @@ const applicationSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ["Applied", "Under Review", "Selected", "Not Selected"],
-    default: "Applied",
+    default: "Applied", // Ensure this default is applied during save
   },
-  feedback: { type: [String], default: [] }, // Updated to accept an array of strings
+  feedback: { type: [String], default: [] }, // Array of strings for feedback
   compatibilityScore: { type: Number },
   createdAt: { type: Date, default: Date.now },
 });

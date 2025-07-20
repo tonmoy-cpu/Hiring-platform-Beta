@@ -48,6 +48,7 @@ function ApplicationStatisticsChart() {
             ],
           });
         }
+        // Note: monthlyStats is available in data but not displayed. Consider adding a line chart if needed.
       } catch (error) {
         console.error("Error fetching application statistics:", error);
         setChartData({

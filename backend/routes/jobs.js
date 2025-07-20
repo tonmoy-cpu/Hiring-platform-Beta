@@ -196,9 +196,12 @@ router.get("/analytics/demographics", auth, async (req, res) => {
         const experienceLevel = resumeParsed.experience?.reduce((max, exp) => Math.max(max, exp.duration || 0), 0) > 5 ? "Senior" : "Junior";
         const location = resumeParsed.contact?.location || "Unknown";
 
-        // Combine experience and location as a single key to avoid double-counting
-        const key = `${experienceLevel} (${location})`;
+        // Use a single key combining experience and location, with a fallback
+        const key = location === "Unknown" ? experienceLevel : `${experienceLevel} (${location})`;
         demographics[key] = (demographics[key] || 0) + 1;
+
+        // Debug log to verify data
+        console.log(`Candidate ${candidateId}: Experience=${experienceLevel}, Location=${location}, Key=${key}`);
       }
     });
 
