@@ -72,7 +72,7 @@ router.get("/", auth, async (req, res) => {
       console.log("Fetching all jobs for recruiter");
       jobs = await Job.find({ isClosed: false }).populate("recruiter", "username");
     }
-    console.log("Returning jobs:", jobs.length, "Job titles:", jobs.map(j => j.title));
+    console.log("Returning jobs:", jobs.length, "Job titles:", jobs.map((j) => j.title));
     res.json(jobs);
   } catch (err) {
     console.error("Error in GET /jobs:", err);
@@ -87,11 +87,10 @@ router.get("/recruiter", auth, async (req, res) => {
   try {
     const jobs = await Job.find({ recruiter: req.user.id }).lean();
 
-    // Calculate or populate applicant counts
     for (let job of jobs) {
       const applications = await Application.find({ job: job._id, status: { $ne: "Not Selected" } });
-      job.applicantsCount = job.applicantsCount || applications.length; // Use stored or calculate
-      job.newApplicantsCount = job.newApplicantsCount || applications.filter(app => app.status === "Applied").length; // Use stored or calculate based on "Applied" status
+      job.applicantsCount = job.applicantsCount || applications.length;
+      job.newApplicantsCount = job.newApplicantsCount || applications.filter((app) => app.status === "Applied").length;
     }
 
     res.json(jobs);
@@ -142,6 +141,94 @@ router.put("/:id/close", auth, async (req, res) => {
   } catch (err) {
     console.error("Error in PUT /jobs/:id/close:", err);
     res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.get("/analytics/job-performance", auth, async (req, res) => {
+  try {
+    if (req.user.userType !== "recruiter") {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    const jobs = await Job.find({ recruiter: req.user.id }).lean();
+    const performanceData = await Promise.all(
+      jobs.map(async (job) => {
+        const applications = await Application.find({ job: job._id });
+        const totalApps = applications.length;
+        const selectedApps = applications.filter((a) => a.status === "Selected").length;
+        const avgScore =
+          totalApps > 0
+            ? (applications.reduce((sum, a) => sum + (a.compatibilityScore || 0), 0) / totalApps).toFixed(2)
+            : 0;
+
+        return {
+          role: job.title,
+          performance: totalApps > 0 ? Math.round((selectedApps / totalApps) * 100) : 0,
+          avgScore: parseFloat(avgScore),
+          applicantsCount: job.applicantsCount || totalApps,
+        };
+      })
+    );
+
+    res.json(performanceData);
+  } catch (err) {
+    console.error("Error in /analytics/job-performance:", err.message, err.stack);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.get("/analytics/demographics", auth, async (req, res) => {
+  if (req.user.userType !== "recruiter")
+    return res.status(403).json({ msg: "Not authorized" });
+
+  try {
+    const applications = await Application.find({ job: { $in: await Job.find({ recruiter: req.user.id }).select("_id") } }).populate("candidate");
+    const demographics = {};
+
+    // Use a Set to track unique candidate IDs
+    const uniqueCandidates = new Set();
+    applications.forEach((app) => {
+      const candidateId = app.candidate?._id.toString();
+      if (!uniqueCandidates.has(candidateId)) {
+        uniqueCandidates.add(candidateId);
+
+        const resumeParsed = app.candidate.resumeParsed || {};
+        const experienceLevel = resumeParsed.experience?.reduce((max, exp) => Math.max(max, exp.duration || 0), 0) > 5 ? "Senior" : "Junior";
+        const location = resumeParsed.contact?.location || "Unknown";
+
+        // Combine experience and location as a single key to avoid double-counting
+        const key = `${experienceLevel} (${location})`;
+        demographics[key] = (demographics[key] || 0) + 1;
+      }
+    });
+
+    console.log("Candidate Demographics Data:", demographics);
+    res.json({ demographics });
+  } catch (err) {
+    console.error("Error in GET /jobs/analytics/demographics:", err.message, err.stack);
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+router.get("/analytics/recommendations", auth, async (req, res) => {
+  if (req.user.userType !== "recruiter")
+    return res.status(403).json({ msg: "Not authorized" });
+
+  try {
+    const jobs = await Job.find({ recruiter: req.user.id });
+    const applications = await Application.find({ job: { $in: jobs.map((j) => j._id) } }).populate("candidate");
+
+    const recommendations = [
+      "Optimize job postings with high-demand skills.",
+      applications.length < 10 ? "Increase job visibility to attract more applicants." : "Review applicant quality for better matches.",
+      jobs.some((j) => !j.salary) ? "Add salary details to improve application rates." : "Consider adjusting salary ranges based on market trends.",
+    ];
+
+    console.log("AI Recommendations Data:", recommendations);
+    res.json({ recommendations });
+  } catch (err) {
+    console.error("Error in GET /jobs/analytics/recommendations:", err.message, err.stack);
+    res.status(500).json({ msg: "Server error", error: err.message });
   }
 });
 

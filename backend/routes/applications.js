@@ -10,7 +10,8 @@ router.post("/apply", auth, async (req, res) => {
   if (req.user.userType !== "candidate") return res.status(403).json({ msg: "Not authorized" });
 
   const { jobId, resumeText, coverLetter } = req.body;
-  if (!jobId || !resumeText || !coverLetter) return res.status(400).json({ msg: "Missing required fields" });
+  if (!jobId || !resumeText || !coverLetter)
+    return res.status(400).json({ msg: "Missing required fields" });
 
   try {
     const job = await Job.findById(jobId);
@@ -41,7 +42,7 @@ router.post("/apply", auth, async (req, res) => {
       jobId,
       {
         $inc: { applicantsCount: 1, newApplicantsCount: 1 },
-        $push: { applicants: application._id }, // Optional, if using applicants array
+        $push: { applicants: application._id },
       },
       { new: true, runValidators: true }
     );
@@ -130,7 +131,6 @@ router.put("/:id/status", auth, async (req, res) => {
     await application.save();
     console.log("Status updated to:", status);
 
-    // Optionally decrement newApplicantsCount if status changes from "Applied"
     if (application.status === "Applied" && status !== "Applied") {
       await Job.findByIdAndUpdate(application.job, { $inc: { newApplicantsCount: -1 } });
     }
@@ -138,6 +138,74 @@ router.put("/:id/status", auth, async (req, res) => {
     res.status(200).json(application);
   } catch (err) {
     console.error("Error in /status:", err.message, err.stack);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+router.get("/analytics/applications", auth, async (req, res) => {
+  try {
+    if (req.user.userType !== "recruiter") {
+      return res.status(403).json({ msg: "Not authorized" });
+    }
+
+    // Debug: Log the recruiter ID and fetch their jobs
+    console.log("Recruiter ID:", req.user.id);
+    const recruiterJobs = await Job.find({ recruiter: req.user.id }).select("_id");
+    console.log("Recruiter Job IDs:", recruiterJobs.map(j => j._id.toString()));
+
+    // Debug: Check if any applications exist for these jobs
+    const matchingApplications = await Application.find({ job: { $in: recruiterJobs.map(j => j._id) } });
+    console.log("Matching Applications Count:", matchingApplications.length);
+    console.log("Matching Applications:", matchingApplications.map(a => ({ _id: a._id, job: a.job, status: a.status })));
+
+    const stats = await Application.aggregate([
+      { $match: { job: { $in: recruiterJobs.map(j => j._id) }, status: { $exists: true } } }, // Ensure status exists
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          status: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+
+    console.log("Application Stats Raw:", stats);
+
+    const statusCounts = {
+      Applied: 0,
+      "Under Review": 0,
+      Selected: 0,
+      "Not Selected": 0,
+    };
+    stats.forEach((stat) => {
+      statusCounts[stat.status] = stat.count || 0; // Handle null counts
+    });
+
+    const monthlyStats = await Application.aggregate([
+      { $match: { job: { $in: recruiterJobs.map(j => j._id) } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id": 1 } },
+    ]);
+
+    console.log("Final Status Counts:", statusCounts);
+
+    res.json({
+      statusCounts,
+      monthlyStats: monthlyStats.map((m) => ({ month: m._id, count: m.count })),
+    });
+  } catch (err) {
+    console.error("Error in /analytics/applications:", err.message, err.stack);
     res.status(500).json({ msg: "Server error" });
   }
 });
