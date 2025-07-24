@@ -55,6 +55,7 @@ export default function Register() {
         localStorage.setItem("userType", decoded.user.userType); // Store userType
         const redirectPath = userType === "recruiter" ? "/recruiter/dashboard" : "/dashboard";
         console.log("Redirecting to:", redirectPath);
+        toast.success("Registration successful!"); // Added toast
         router.push(redirectPath);
       } else {
         toast.error(data.msg);
@@ -66,106 +67,106 @@ export default function Register() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#373737]">
-      <div className="w-full max-w-md p-8 form-card rounded-md shadow-lg">
-        <h1 className="text-3xl font-bold text-center mb-8 text-white">Register</h1>
+    <main className="min-h-screen flex items-center justify-center bg-background"> {/* Use bg-background */}
+      <div className="w-full max-w-md p-8 form-card rounded-lg shadow-lg"> {/* Use form-card and rounded-lg */}
+        <h1 className="text-3xl font-bold text-center mb-8 text-foreground">Register</h1> {/* Use text-foreground */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="username" className="block uppercase text-sm text-white">Username</label>
+            <label htmlFor="username" className="block uppercase text-sm text-foreground">Username</label> {/* Use text-foreground */}
             <input
               type="text"
               id="username"
               name="username"
               onChange={handleChange}
-              className="input-field"
+              className="input-field" // Use input-field
               required
             />
           </div>
           <div>
-            <label htmlFor="email" className="block uppercase text-sm text-white">Email</label>
+            <label htmlFor="email" className="block uppercase text-sm text-foreground">Email</label> {/* Use text-foreground */}
             <input
               type="email"
               id="email"
               name="email"
               onChange={handleChange}
-              className="input-field"
+              className="input-field" // Use input-field
               required
             />
           </div>
           <div>
-            <label htmlFor="password" className="block uppercase text-sm text-white">Password</label>
+            <label htmlFor="password" className="block uppercase text-sm text-foreground">Password</label> {/* Use text-foreground */}
             <input
               type="password"
               id="password"
               name="password"
               onChange={handleChange}
-              className="input-field"
+              className="input-field" // Use input-field
               required
             />
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="block uppercase text-sm text-white">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="block uppercase text-sm text-foreground">Confirm Password</label> {/* Use text-foreground */}
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
               onChange={handleChange}
-              className="input-field"
+              className="input-field" // Use input-field
               required
             />
           </div>
           <div>
-            <label htmlFor="profilePic" className="block uppercase text-sm text-white">Profile Picture</label>
+            <label htmlFor="profilePic" className="block uppercase text-sm text-foreground">Profile Picture</label> {/* Use text-foreground */}
             <input
               type="file"
               id="profilePic"
               name="profilePic"
               onChange={handleFileChange}
-              className="text-white"
+              className="text-foreground" // Use text-foreground
             />
           </div>
           {userType === "candidate" && (
             <div>
-              <label htmlFor="resume" className="block uppercase text-sm text-white">Resume (PDF)</label>
+              <label htmlFor="resume" className="block uppercase text-sm text-foreground">Resume (PDF)</label> {/* Use text-foreground */}
               <input
                 type="file"
                 id="resume"
                 name="resume"
                 accept=".pdf"
                 onChange={handleFileChange}
-                className="text-white"
+                className="text-foreground" // Use text-foreground
               />
             </div>
           )}
           <div className="mt-4">
-            <p className="uppercase text-sm text-white mb-2">Register As</p>
+            <p className="uppercase text-sm text-foreground mb-2">Register As</p> {/* Use text-foreground */}
             <div className="flex justify-center space-x-6">
-              <label className="flex items-center text-white">
+              <label className="flex items-center text-foreground"> {/* Use text-foreground */}
                 <input
                   type="radio"
                   name="userType"
                   value="candidate"
                   checked={userType === "candidate"}
                   onChange={() => setUserType("candidate")}
-                  className="mr-2 accent-[#313131]"
+                  className="mr-2 accent-primary" // Use accent-primary
                 />
                 Candidate
               </label>
-              <label className="flex items-center text-white">
+              <label className="flex items-center text-foreground"> {/* Use text-foreground */}
                 <input
                   type="radio"
                   name="userType"
                   value="recruiter"
                   checked={userType === "recruiter"}
                   onChange={() => setUserType("recruiter")}
-                  className="mr-2 accent-[#313131]"
+                  className="mr-2 accent-primary" // Use accent-primary
                 />
                 Recruiter
               </label>
             </div>
           </div>
           <div className="text-center text-sm mt-4">
-            <Link href="/" className="text-white hover:underline">Already a user? Login</Link>
+            <Link href="/" className="text-primary hover:underline">Already a user? Login</Link> {/* Use text-primary */}
           </div>
           <div className="flex justify-center mt-8">
             <button type="submit" className="submit-button">Register</button>

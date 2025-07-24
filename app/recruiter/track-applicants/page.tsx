@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { CircleUser, FileText, MoreHorizontal, MessageSquare } from "lucide-react";
+import { CircleUser, FileText, MoreHorizontal, MessageSquare, X } from "lucide-react"; // X was missing here
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -37,11 +37,13 @@ export default function TrackApplicants() {
         });
         if (!res.ok) throw new Error("Failed to fetch applications");
         const data = await res.json();
-        console.log("Fetched applications:", data);
         setApplications(data);
       } catch (err) {
-        console.error("Error fetching applications:", err);
-        toast.error("Failed to load applicants.");
+        toast.error(`Error: ${err.message}`);
+        if (err.message.includes("401")) {
+          localStorage.removeItem("token");
+          router.push("/");
+        }
       }
     };
     fetchApplications();
@@ -49,7 +51,16 @@ export default function TrackApplicants() {
     socketInstance.on("connect", () => console.log("Socket connected"));
     socketInstance.on("connect_error", (err) => console.error("Socket error:", err));
     socketInstance.on("message", (message) => {
-      if (showChatModal) setChatMessages((prev) => [...prev, message]);
+      // Only append if the chat modal for this chat is currently open
+      if (showChatModal && showChatModal._id === message.chatId) {
+        setChatMessages((prev) => {
+          // Prevent adding duplicate messages from socket if already optimistically added
+          const isDuplicate = prev.some(
+            (m) => m._id === message._id || (m.content === message.content && m.timestamp === message.timestamp)
+          );
+          return isDuplicate ? prev : [...prev, message];
+        });
+      }
     });
     socketInstance.on("notification", ({ chatId, message }) => {
       if (message.sender !== localStorage.getItem("userId")) {
@@ -59,7 +70,7 @@ export default function TrackApplicants() {
     });
 
     return () => {
-      socketInstance.off("message");
+      socketInstance.off("message"); // Explicitly turn off the listener
       socketInstance.off("notification");
       socketInstance.off("connect");
       socketInstance.off("connect_error");
@@ -106,6 +117,7 @@ export default function TrackApplicants() {
   };
 
   const handleChat = async (app) => {
+    setChatMessages([]); // Clear messages before fetching new ones
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`http://localhost:5000/api/chat/${app._id}`, {
@@ -114,7 +126,7 @@ export default function TrackApplicants() {
       if (!res.ok) throw new Error("Failed to load chat");
       const chat = await res.json();
       setShowChatModal(chat);
-      setChatMessages(chat.messages);
+      setChatMessages(chat.messages); // Set messages with fetched data
       socket.emit("joinChat", chat._id);
 
       await fetch(`http://localhost:5000/api/chat/${chat._id}/read`, {
@@ -141,12 +153,22 @@ export default function TrackApplicants() {
       });
       if (!res.ok) throw new Error("Failed to send message");
       const message = await res.json();
+      
+      // Optimistically add the message to the chatMessages state
+      setChatMessages((prev) => [...prev, message]);
+
+      // Emit the message via socket (server will broadcast it, but we already updated locally)
       socket.emit("sendMessage", { chatId: showChatModal._id, message });
       setNewMessage("");
       setAttachment(null);
     } catch (err) {
       toast.error(`Error sending message: ${err.message}`);
     }
+  };
+
+  const closeChatModal = () => {
+    setShowChatModal(null);
+    setChatMessages([]); // Clear messages when closing the modal
   };
 
   const handleAnalyze = async (app) => {
@@ -216,44 +238,51 @@ export default function TrackApplicants() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#373737]">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Use bg-background */}
       <Navbar userType="recruiter" />
       <main className="flex-1 p-6">
-        <div className="bg-[#313131] p-6 rounded-lg mb-8 shadow-md">
-          <h1 className="text-3xl font-semibold text-center uppercase text-white">Track Applicants</h1>
+        <div className="bg-accent p-6 rounded-lg mb-8 shadow-md">
+          {/* Use bg-accent */}
+          <h1 className="text-3xl font-semibold text-center uppercase text-foreground">
+            Track Applicants
+          </h1>
+          {/* Use text-foreground */}
         </div>
         <div className="space-y-6">
           {applications.length > 0 ? (
             applications.map((app) => (
-              <div key={app._id} className="bg-[#d9d9d9] p-4 rounded-lg shadow-md">
+              <div key={app._id} className="card">
+                {/* Use card class */}
                 <div className="flex items-center">
-                  <CircleUser className="h-10 w-10 text-[#313131] mr-4" />
-                  <div className="flex-1 text-[#313131]">
+                  <CircleUser className="h-10 w-10 text-primary mr-4" />{" "}
+                  {/* Use text-primary */}
+                  <div className="flex-1 text-foreground">
+                    {/* Use text-foreground */}
                     <p className="font-bold text-lg">{app.candidate.username}</p>
                     <p className="text-sm">{app.job.title}</p>
                     <p className="text-xs">Current Status: {app.status}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleChat(app)}
-                      className="p-2 rounded-full bg-[#313131] hover:bg-[#4a4a4a] transition"
-                      title="Chat"
-                    >
-                      <MessageSquare className="h-5 w-5 text-white" />
+                    <button onClick={() => handleChat(app)} className="btn-icon" title="Chat">
+                      {/* Use btn-icon */}
+                      <MessageSquare className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleAnalyze(app)}
-                      className="p-2 rounded-full bg-[#313131] hover:bg-[#4a4a4a] transition"
+                      className="btn-icon"
                       title="Analyze with AI"
                     >
-                      <MoreHorizontal className="h-5 w-5 text-white" />
+                      {/* Use btn-icon */}
+                      <MoreHorizontal className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleDetails(app)}
-                      className="p-2 rounded-full bg-[#313131] hover:bg-[#4a4a4a] transition"
+                      className="btn-icon"
                       title="Details"
                     >
-                      <FileText className="h-5 w-5 text-white" />
+                      {/* Use btn-icon */}
+                      <FileText className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
@@ -261,72 +290,94 @@ export default function TrackApplicants() {
                   <select
                     value={statusUpdates[app._id] || app.status}
                     onChange={(e) => handleStatusChange(app._id, e.target.value)}
-                    className="w-full p-2 mb-2 border rounded text-[#313131]"
+                    className="input-field mb-2"
                   >
-                    <option value="Applied">Applied</option>
-                    <option value="Under Review">Under Review</option>
-                    <option value="Selected">Selected</option>
-                    <option value="Not Selected">Not Selected</option>
+                    {/* Use input-field */}
+                    <option value="Applied" className="bg-background text-foreground">
+                      Applied
+                    </option>
+                    {/* Set option colors */}
+                    <option value="Under Review" className="bg-background text-foreground">
+                      Under Review
+                    </option>
+                    {/* Set option colors */}
+                    <option value="Selected" className="bg-background text-foreground">
+                      Selected
+                    </option>
+                    {/* Set option colors */}
+                    <option value="Not Selected" className="bg-background text-foreground">
+                      Not Selected
+                    </option>
+                    {/* Set option colors */}
                   </select>
-                  <button
-                    onClick={() => handleSubmitStatus(app._id)}
-                    className="w-full bg-[#313131] text-white py-2 rounded hover:bg-[#4a4a4a] transition"
-                  >
+                  <button onClick={() => handleSubmitStatus(app._id)} className="btn-primary w-full">
+                    {/* Use btn-primary */}
                     Submit
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-center text-white">No applicants found.</p>
+            <p className="text-center text-foreground">No applicants found.</p>
+            /* Use text-foreground */
           )}
         </div>
 
         {showChatModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#d9d9d9] p-6 rounded-lg shadow-lg w-full max-w-lg">
-              <h2 className="text-xl font-bold text-[#313131] mb-4">
-                Chat with {applications.find((app) => app._id === showChatModal.application)?.candidate.username}
-              </h2>
-              <div className="h-64 overflow-y-auto mb-4 bg-white p-2 rounded">
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 modal">
+            <div className="bg-accent p-6 rounded-lg shadow-lg w-full max-w-lg modal-content">
+              {/* Use bg-accent */}
+              <h2 className="text-xl font-bold text-primary mb-4">Chat with Candidate</h2>
+              <div className="h-64 overflow-y-auto mb-4 bg-background p-2 rounded">
+                {/* Use bg-background */}
                 {chatMessages.map((msg, index) => (
                   <div
                     key={index}
-                    className={`mb-2 ${msg.sender === localStorage.getItem("userId") ? "text-right" : "text-left"}`}
+                    className={`mb-2 ${
+                      msg.sender === localStorage.getItem("userId") ? "text-right" : "text-left"
+                    }`}
                   >
-                    <p className="text-[#313131]">{msg.content}</p>
+                    <p className="text-foreground">{msg.content}</p>
+                    {/* Use text-foreground */}
                     {msg.attachment && (
-                      <a href={`http://localhost:5000${msg.attachment}`} target="_blank" className="text-blue-500">
-                        {msg.attachmentType === "link" ? msg.content : `Attachment (${msg.attachmentType})`}
+                      <a
+                        href={`http://localhost:5000${msg.attachment}`}
+                        target="_blank"
+                        className="text-info underline"
+                      >
+                        {/* Use text-info */}
+                        {msg.attachmentType === "link"
+                          ? msg.content
+                          : `Attachment (${msg.attachmentType})`}
                       </a>
                     )}
-                    <span className="text-xs text-gray-500">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </span>{" "}
+                    {/* Use gray-400 */}
                   </div>
                 ))}
               </div>
               <textarea
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="w-full p-2 rounded-lg border border-[#313131] text-[#313131]"
+                className="input-field"
                 placeholder="Type a message..."
               />
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 onChange={(e) => setAttachment(e.target.files ? e.target.files[0] : null)}
-                className="mt-2"
+                className="mt-2 text-foreground"
               />
+              {/* Use text-foreground */}
               <div className="flex justify-end space-x-2 mt-2">
-                <button
-                  onClick={() => setShowChatModal(null)}
-                  className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                >
+                <button onClick={closeChatModal} className="btn-secondary">
+                  {/* Use btn-secondary */}
                   Close
                 </button>
-                <button
-                  onClick={sendMessage}
-                  className="bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a]"
-                >
+                <button onClick={sendMessage} className="btn-primary">
+                  {/* Use btn-primary */}
                   Send
                 </button>
               </div>
@@ -337,44 +388,70 @@ export default function TrackApplicants() {
         {notifications.map((notif, index) => (
           <div
             key={index}
-            className="fixed top-4 right-4 bg-[#313131] text-white p-4 rounded-lg shadow-lg z-50"
+            className="fixed top-4 right-4 bg-accent text-foreground p-4 rounded-lg shadow-lg z-50"
           >
+            {/* Use bg-accent and text-foreground */}
             New message in chat {notif.chatId}
           </div>
         ))}
       </main>
 
       {selectedApplicant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#d9d9d9] p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[#313131] mb-4">{selectedApplicant.candidate.username}’s Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 modal">
+          <div className="bg-accent p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto modal-content">
+            {/* Use bg-accent */}
+            <button
+              onClick={() => setSelectedApplicant(null)}
+              className="absolute top-2 right-2 btn-icon"
+              title="Close"
+            >
+              {/* Use btn-icon */}
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-xl font-bold text-primary mb-4">
+              {selectedApplicant.candidate.username}’s Details
+            </h2>
             {analysis ? (
-              <div className="mt-4">
-                <h3 className="font-bold text-[#313131]">AI Analysis</h3>
-                <p><strong>Score:</strong> {analysis.score}%</p>
-                <p><strong>Feedback:</strong> {analysis.feedback}</p>
-                <p><strong>Matched Skills:</strong> {analysis.matchedSkills.join(", ") || "None"}</p>
-                <p><strong>Missing Skills:</strong> {analysis.missingSkills.join(", ") || "None"}</p>
+              <div className="mt-4 text-foreground">
+                {/* Use text-foreground */}
+                <h3 className="font-bold">AI Analysis</h3>
+                <p>
+                  <strong>Score:</strong> {analysis.score}%
+                </p>
+                <p>
+                  <strong>Feedback:</strong> {analysis.feedback}
+                </p>
+                <p>
+                  <strong>Matched Skills:</strong> {analysis.matchedSkills.join(", ") || "None"}
+                </p>
+                <p>
+                  <strong>Missing Skills:</strong> {analysis.missingSkills.join(", ") || "None"}
+                </p>
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-foreground">
+                  {/* Use text-foreground */}
                   <div>
-                    <h3 className="font-bold text-[#313131]">Contact</h3>
+                    <h3 className="font-bold">Contact</h3>
                     <p>
-                      {selectedApplicant.candidate.resumeParsed?.contact?.name || "N/A"}<br />
-                      {selectedApplicant.candidate.resumeParsed?.contact?.email || "N/A"}<br />
+                      {selectedApplicant.candidate.resumeParsed?.contact?.name || "N/A"}
+                      <br />
+                      {selectedApplicant.candidate.resumeParsed?.contact?.email || "N/A"}
+                      <br />
                       {selectedApplicant.candidate.resumeParsed?.contact?.phone || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#313131]">Skills</h3>
-                    <ul className="list-disc pl-4 text-[#313131]">
-                      {selectedApplicant.candidate.resumeParsed?.skills?.map((s) => <li key={s}>{s}</li>) || <li>N/A</li>}
+                    <h3 className="font-bold">Skills</h3>
+                    <ul className="list-disc pl-4">
+                      {selectedApplicant.candidate.resumeParsed?.skills?.map((s) => (
+                        <li key={s}>{s}</li>
+                      )) || <li>N/A</li>}
                     </ul>
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#313131]">Experience</h3>
+                    <h3 className="font-bold">Experience</h3>
                     {selectedApplicant.candidate.resumeParsed?.experience?.map((e, i) => (
                       <p key={i}>
                         {e.title} at {e.company} ({e.years})
@@ -382,7 +459,7 @@ export default function TrackApplicants() {
                     )) || <p>N/A</p>}
                   </div>
                   <div>
-                    <h3 className="font-bold text-[#313131]">Education</h3>
+                    <h3 className="font-bold">Education</h3>
                     {selectedApplicant.candidate.resumeParsed?.education?.map((e, i) => (
                       <p key={i}>
                         {e.degree}, {e.school} ({e.year})
@@ -390,17 +467,20 @@ export default function TrackApplicants() {
                     )) || <p>N/A</p>}
                   </div>
                 </div>
-                <div className="mt-4">
-                  <h3 className="font-bold text-[#313131]">Cover Letter</h3>
-                  <p className="text-[#313131]">{selectedApplicant.coverLetter || "N/A"}</p>
+                <div className="mt-4 text-foreground">
+                  {/* Use text-foreground */}
+                  <h3 className="font-bold">Cover Letter</h3>
+                  <p>{selectedApplicant.coverLetter || "N/A"}</p>
                 </div>
-                <div className="mt-4">
-                  <h3 className="font-bold text-[#313131]">Resume</h3>
+                <div className="mt-4 text-foreground">
+                  {/* Use text-foreground */}
+                  <h3 className="font-bold">Resume</h3>
                   {selectedApplicant.candidate.resumeFile ? (
                     <button
                       onClick={() => handleDownloadResume(selectedApplicant.candidate._id)}
-                      className="text-[#313131] underline hover:text-[#4a4a4a]"
+                      className="text-primary underline hover:text-primary-hover"
                     >
+                      {/* Use text-primary and hover */}
                       Download Resume
                     </button>
                   ) : (
@@ -409,10 +489,8 @@ export default function TrackApplicants() {
                 </div>
               </>
             )}
-            <button
-              onClick={() => setSelectedApplicant(null)}
-              className="mt-4 bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a] transition"
-            >
+            <button onClick={() => setSelectedApplicant(null)} className="mt-4 btn-primary">
+              {/* Use btn-primary */}
               Close
             </button>
           </div>

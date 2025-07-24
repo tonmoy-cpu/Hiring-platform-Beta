@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { skillOptions, domainOptions, fetchResumeFeedback } from "@/lib/utils";
 import { debounce } from "lodash";
 import { fetchDraft } from "@/lib/draftUtils";
+import { X, Save } from 'lucide-react'; // Import icons
 
 interface ResumeBuilderProps {
   onClose: () => void;
@@ -231,58 +232,58 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
   };
 
   return (
-    <div className="bg-[#d9d9d9] p-6 rounded-lg shadow-lg w-full max-w-2xl relative h-[90vh] flex flex-col">
+    <div className="bg-accent p-6 rounded-lg shadow-lg w-full max-w-2xl relative h-[90vh] flex flex-col"> {/* Using bg-accent */}
       <button
         onClick={onClose}
-        className="absolute top-2 right-2 text-[#313131] hover:text-[#4a4a4a] font-bold"
+        className="absolute top-2 right-2 btn-icon" // Using btn-icon
       >
-        X
+        <X className="h-5 w-5" />
       </button>
-      <h2 className="text-2xl font-bold text-[#313131] mb-4">Resume Builder</h2>
+      <h2 className="text-2xl font-bold text-primary mb-4">Resume Builder</h2> {/* Using text-primary */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-2">
         <div>
-          <label className="block text-[#313131] font-semibold">Select Job</label>
+          <label className="block text-foreground font-semibold">Select Job</label> {/* Using text-foreground */}
           <select
             value={selectedJobId}
             onChange={(e) => setSelectedJobId(e.target.value)}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+            className="input-field"
           >
-            <option value="">Select a job</option>
+            <option value="" className="bg-background text-foreground">Select a job</option>
             {jobs.map((job) => (
-              <option key={job._id} value={job._id}>{job.title}</option>
+              <option key={job._id} value={job._id} className="bg-background text-foreground">{job.title}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Name</label>
+          <label className="block text-foreground font-semibold">Name</label> {/* Using text-foreground */}
           <input
             value={resumeData.contact.name}
             onChange={(e) => handleChange("contact", 0, "name", e.target.value)}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+            className="input-field"
           />
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Email</label>
+          <label className="block text-foreground font-semibold">Email</label> {/* Using text-foreground */}
           <input
             value={resumeData.contact.email}
             onChange={(e) => handleChange("contact", 0, "email", e.target.value)}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+            className="input-field"
           />
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Phone</label>
+          <label className="block text-foreground font-semibold">Phone</label> {/* Using text-foreground */}
           <input
             value={resumeData.contact.phone}
             onChange={(e) => handleChange("contact", 0, "phone", e.target.value)}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+            className="input-field"
           />
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Skills (comma or space-separated, or select multiple)</label>
+          <label className="block text-foreground font-semibold">Skills (comma or space-separated, or select multiple)</label> {/* Using text-foreground */}
           <input
             value={resumeData.skills.join(", ")}
             onChange={(e) => handleChange("skills", 0, "skills", e.target.value)}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131] mb-2"
+            className="input-field mb-2"
             placeholder="e.g., JavaScript, React.js (type and press comma or space)"
           />
           <select
@@ -291,90 +292,90 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
               const selected = Array.from(e.target.selectedOptions, option => option.value);
               handleChange("skills", 0, "skills", [...resumeData.skills, ...selected].join(", "));
             }}
-            className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131] h-24 overflow-y-auto"
+            className="input-field h-24 overflow-y-auto"
           >
             {skillOptions.map((skill) => (
-              <option key={skill} value={skill}>{skill}</option>
+              <option key={skill} value={skill} className="bg-background text-foreground">{skill}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Experience</label>
+          <label className="block text-foreground font-semibold">Experience</label> {/* Using text-foreground */}
           {resumeData.experience.map((exp, index) => (
             <div key={index} className="space-y-2 mb-2">
               <input
                 value={exp.title}
                 onChange={(e) => handleChange("experience", index, "title", e.target.value)}
                 placeholder="Title"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
               <input
                 value={exp.company}
                 onChange={(e) => handleChange("experience", index, "company", e.target.value)}
                 placeholder="Company"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
               <input
                 value={exp.years}
                 onChange={(e) => handleChange("experience", index, "years", e.target.value)}
                 placeholder="Years (e.g., 2024-Present)"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
             </div>
           ))}
           <button
             onClick={() => addSection("experience")}
-            className="bg-[#4a4a4a] text-white p-2 rounded mt-2"
+            className="btn-secondary mt-2" // Using btn-secondary
           >
             Add Experience
           </button>
         </div>
         <div>
-          <label className="block text-[#313131] font-semibold">Education</label>
+          <label className="block text-foreground font-semibold">Education</label> {/* Using text-foreground */}
           {resumeData.education.map((edu, index) => (
             <div key={index} className="space-y-2 mb-2">
               <input
                 value={edu.degree}
                 onChange={(e) => handleChange("education", index, "degree", e.target.value)}
                 placeholder="Degree"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
               <input
                 value={edu.school}
                 onChange={(e) => handleChange("education", index, "school", e.target.value)}
                 placeholder="School"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
               <input
                 value={edu.year}
                 onChange={(e) => handleChange("education", index, "year", e.target.value)}
                 placeholder="Year (e.g., 2026)"
-                className="w-full p-2 rounded-lg border border-[#4f4d4d] text-[#313131]"
+                className="input-field"
               />
             </div>
           ))}
           <button
             onClick={() => addSection("education")}
-            className="bg-[#4a4a4a] text-white p-2 rounded mt-2"
+            className="btn-secondary mt-2" // Using btn-secondary
           >
             Add Education
           </button>
         </div>
-        <div>
+        <div className="text-foreground"> {/* Using text-foreground for feedback section */}
           <button
             onClick={handleAnalyze}
-            className="bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a] mr-2"
+            className="btn-primary mr-2" // Using btn-primary
           >
             Analyze Resume
           </button>
           <button
             onClick={handleLoadDraft}
             disabled={isLoadingDraft}
-            className="bg-[#4a4a4a] text-white px-4 py-2 rounded hover:bg-[#313131] disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed" // Using btn-secondary
           >
             {isLoadingDraft ? "Loading..." : "Load Draft"}
           </button>
-          <h3 className="text-[#313131] font-semibold mt-4">Feedback</h3>
+          <h3 className="font-semibold mt-4">Feedback</h3>
           <p>Score: {feedback.score || 0}%</p>
           <p>Matched Skills: {feedback.matchedSkills.join(", ") || "None"}</p>
           <ul className="list-disc pl-5">
@@ -387,7 +388,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
               <li key={i}>{item}</li>
             ))}
           </ul>
-          <h3 className="text-[#313131] font-semibold mt-4">ATS Compatibility</h3>
+          <h3 className="font-semibold mt-4">ATS Compatibility</h3>
           <p>ATS Score: {feedback.atsScore || 0}%</p>
           <ul className="list-disc pl-5">
             {feedback.atsFeedback.map((item, i) => (
@@ -399,14 +400,15 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       <div className="mt-4 flex justify-end space-x-4">
         <button
           onClick={onClose}
-          className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+          className="btn-secondary" // Using btn-secondary
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="bg-[#313131] text-white px-4 py-2 rounded hover:bg-[#4a4a4a]"
+          className="btn-primary flex items-center gap-2" // Using btn-primary
         >
+          <Save className="h-5 w-5" />
           Save
         </button>
       </div>

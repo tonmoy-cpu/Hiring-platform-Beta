@@ -34,7 +34,7 @@ function ApplicationStatisticsChart() {
         if (values.every((v) => v === 0)) {
           setChartData({
             labels: ["No Applications"],
-            datasets: [{ label: "Applications", data: [1], backgroundColor: "#4a4a4a" }],
+            datasets: [{ label: "Applications", data: [1], backgroundColor: "var(--accent)" }], // Use var(--accent)
           });
         } else {
           setChartData({
@@ -43,7 +43,7 @@ function ApplicationStatisticsChart() {
               {
                 label: "Applications",
                 data: values,
-                backgroundColor: "#4a4a4a",
+                backgroundColor: "var(--primary)", // Use var(--primary)
               },
             ],
           });
@@ -53,7 +53,7 @@ function ApplicationStatisticsChart() {
         console.error("Error fetching application statistics:", error);
         setChartData({
           labels: ["No Data"],
-          datasets: [{ label: "Error", data: [1], backgroundColor: "#4a4a4a" }],
+          datasets: [{ label: "Error", data: [1], backgroundColor: "var(--danger)" }], // Use var(--danger)
         });
       }
     };
@@ -62,7 +62,7 @@ function ApplicationStatisticsChart() {
     return () => clearInterval(interval);
   }, [token]);
 
-  if (!chartData) return <div className="text-[#313131] text-center">Loading...</div>;
+  if (!chartData) return <div className="text-foreground text-center">Loading...</div>; // Use text-foreground
 
   return (
     <div style={{ height: "300px" }}>
@@ -71,16 +71,40 @@ function ApplicationStatisticsChart() {
         options={{
           responsive: true,
           plugins: {
-            legend: { position: "top" },
-            title: { display: true, text: "Application Statistics" },
+            legend: { 
+              position: "top",
+              labels: {
+                color: "var(--foreground)" // Set legend text color
+              }
+            },
+            title: { 
+              display: true, 
+              text: "Application Statistics",
+              color: "var(--foreground)" // Set title text color
+            },
           },
           scales: {
             y: {
               beginAtZero: true,
               min: 0,
               max: 10,
-              ticks: { stepSize: 1, precision: 0 },
+              ticks: { 
+                stepSize: 1, 
+                precision: 0,
+                color: "var(--foreground)" // Set y-axis tick color
+              },
+              grid: {
+                color: "rgba(255, 255, 255, 0.1)" // Set grid line color
+              }
             },
+            x: {
+              ticks: {
+                color: "var(--foreground)" // Set x-axis tick color
+              },
+              grid: {
+                color: "rgba(255, 255, 255, 0.1)" // Set grid line color
+              }
+            }
           },
         }}
       />
@@ -120,25 +144,25 @@ function JobPerformance() {
     return () => clearInterval(interval);
   }, [token]);
 
-  if (!performanceData.length) return <div className="text-[#313131] text-center">Loading...</div>;
+  if (!performanceData.length) return <div className="text-foreground text-center">Loading...</div>; // Use text-foreground
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4"> {/* Increased space-y for better readability */}
       {performanceData.map((item, index) => (
-        <div key={index}>
-          <div className="flex justify-between">
-            <span className="text-[#313131]">{item.role || "Unknown"}</span>
-            <span className="text-[#313131]">
+        <div key={index} className="animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}> {/* Added animation */}
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-foreground font-medium">{item.role || "Unknown"}</span> {/* Use text-foreground */}
+            <span className="text-primary text-sm"> {/* Use text-primary */}
               {item.performance || 0}% (Avg Score: {item.avgScore || 0})
             </span>
           </div>
-          <div className="w-full bg-[#313131] h-2 rounded-full">
+          <div className="w-full bg-border h-2 rounded-full"> {/* Use bg-border */}
             <div
-              className="bg-[#4a4a4a] h-2 rounded-full"
+              className="bg-primary h-2 rounded-full" // Use bg-primary
               style={{ width: `${Math.min(item.performance || 0, 100)}%` }}
             ></div>
           </div>
-          <div className="text-[#313131] text-sm">Applicants: {item.applicantsCount || 0}</div>
+          <div className="text-gray-400 text-xs mt-1">Applicants: {item.applicantsCount || 0}</div> {/* Use gray-400 */}
         </div>
       ))}
     </div>
@@ -172,7 +196,7 @@ function CandidateDemographicsChart() {
             {
               label: "Candidates",
               data: Object.values(data.demographics || {}),
-              backgroundColor: "#4a4a4a",
+              backgroundColor: "var(--info)", // Use var(--info)
             },
           ],
         });
@@ -180,7 +204,7 @@ function CandidateDemographicsChart() {
         console.error("Error fetching candidate demographics:", error);
         setChartData({
           labels: ["No Data"],
-          datasets: [{ label: "Error", data: [1], backgroundColor: "#4a4a4a" }],
+          datasets: [{ label: "Error", data: [1], backgroundColor: "var(--danger)" }], // Use var(--danger)
         });
       }
     };
@@ -189,19 +213,53 @@ function CandidateDemographicsChart() {
     return () => clearInterval(interval);
   }, [token]);
 
-  if (!chartData) return <div className="text-[#313131] text-center">Loading...</div>;
+  if (!chartData) return <div className="text-foreground text-center">Loading...</div>; // Use text-foreground
 
   return (
-    <Bar
-      data={chartData}
-      options={{
-        responsive: true,
-        plugins: {
-          legend: { position: "top" },
-          title: { display: true, text: "Candidate Demographics" },
-        },
-      }}
-    />
+    <div style={{ height: "300px" }}>
+      <Bar
+        data={chartData}
+        options={{
+          responsive: true,
+          plugins: {
+            legend: { 
+              position: "top",
+              labels: {
+                color: "var(--foreground)" // Set legend text color
+              }
+            },
+            title: { 
+              display: true, 
+              text: "Candidate Demographics",
+              color: "var(--foreground)" // Set title text color
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              min: 0,
+              max: 10,
+              ticks: { 
+                stepSize: 1, 
+                precision: 0,
+                color: "var(--foreground)" // Set y-axis tick color
+              },
+              grid: {
+                color: "rgba(255, 255, 255, 0.1)" // Set grid line color
+              }
+            },
+            x: {
+              ticks: {
+                color: "var(--foreground)" // Set x-axis tick color
+              },
+              grid: {
+                color: "rgba(255, 255, 255, 0.1)" // Set grid line color
+              }
+            }
+          },
+        }}
+      />
+    </div>
   );
 }
 
@@ -237,12 +295,15 @@ function AIRecommendations() {
     return () => clearInterval(interval);
   }, [token]);
 
-  if (!recommendations.length) return <div className="text-[#313131] text-center">Loading...</div>;
+  if (!recommendations.length) return <div className="text-foreground text-center">Loading...</div>; // Use text-foreground
 
   return (
-    <ul className="space-y-2 text-[#313131]">
+    <ul className="space-y-3 text-foreground"> {/* Increased space-y and use text-foreground */}
       {recommendations.map((rec, index) => (
-        <li key={index}>• {rec}</li>
+        <li key={index} className="flex items-start gap-2 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}> {/* Added flex and animation */}
+          <span className="text-primary">•</span> {/* Use text-primary for bullet */}
+          <span>{rec}</span>
+        </li>
       ))}
     </ul>
   );
@@ -250,31 +311,31 @@ function AIRecommendations() {
 
 export default function Analytics() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background"> {/* Use bg-background */}
       <Navbar userType="recruiter" />
       <main className="flex-1 p-4">
-        <div className="bg-[#313131] p-6 rounded-md mb-8">
-          <h1 className="text-2xl font-bold text-center uppercase">AI ANALYTICS</h1>
+        <div className="bg-accent p-6 rounded-lg mb-8"> {/* Use bg-accent and rounded-lg */}
+          <h1 className="text-3xl font-bold text-center uppercase text-foreground">AI ANALYTICS</h1> {/* Use text-foreground */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[#d9d9d9] p-6 rounded-md">
-            <h2 className="text-[#313131] font-bold mb-4">Application Statistics</h2>
+          <div className="card"> {/* Use card class */}
+            <h2 className="text-foreground font-bold mb-4">Application Statistics</h2> {/* Use text-foreground */}
             <ApplicationStatisticsChart />
           </div>
 
-          <div className="bg-[#d9d9d9] p-6 rounded-md">
-            <h2 className="text-[#313131] font-bold mb-4">Candidate Demographics</h2>
+          <div className="card"> {/* Use card class */}
+            <h2 className="text-foreground font-bold mb-4">Candidate Demographics</h2> {/* Use text-foreground */}
             <CandidateDemographicsChart />
           </div>
 
-          <div className="bg-[#d9d9d9] p-6 rounded-md">
-            <h2 className="text-[#313131] font-bold mb-4">Job Performance</h2>
+          <div className="card"> {/* Use card class */}
+            <h2 className="text-foreground font-bold mb-4">Job Performance</h2> {/* Use text-foreground */}
             <JobPerformance />
           </div>
 
-          <div className="bg-[#d9d9d9] p-6 rounded-md">
-            <h2 className="text-[#313131] font-bold mb-4">AI Recommendations</h2>
+          <div className="card"> {/* Use card class */}
+            <h2 className="text-foreground font-bold mb-4">AI Recommendations</h2> {/* Use text-foreground */}
             <AIRecommendations />
           </div>
         </div>

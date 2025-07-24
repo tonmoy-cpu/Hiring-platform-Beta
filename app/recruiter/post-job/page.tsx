@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { skillOptions, domainOptions } from "@/lib/utils";
+import { Plus } from 'lucide-react'; // Import Plus icon
 
 export default function PostJob() {
   const [formData, setFormData] = useState({
@@ -78,55 +79,55 @@ export default function PostJob() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#373737]">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar userType="recruiter" />
-      <main className="flex-1 p-6">
-        <div className="bg-[#313131] p-6 rounded-lg mb-8 shadow-md">
-          <h1 className="text-3xl font-semibold text-center uppercase text-white tracking-wide">
+      <main className="flex-1 p-6 max-w-4xl mx-auto w-full"> {/* Added max-w-4xl and mx-auto for centering */}
+        <div className="bg-accent p-6 rounded-lg mb-8 shadow-md">
+          <h1 className="text-3xl font-bold text-center uppercase text-foreground tracking-wide">
             Post a Job
           </h1>
         </div>
 
-        <div className="bg-[#d9d9d9] p-8 rounded-lg shadow-md">
+        <div className="card p-8"> {/* Using .card class for consistent styling */}
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-[#313131] font-semibold mb-2">Job Name</label>
+              <label className="block text-foreground font-semibold mb-2">Job Name</label>
               <input
                 type="text"
                 name="jobName"
                 value={formData.jobName}
                 onChange={handleInputChange}
-                className="w-full p-2 rounded-lg bg-transparent border border-[#313131] focus:outline-none focus:ring-2 focus:ring-[#313131]"
+                className="input-field"
                 required
               />
             </div>
             <div>
-              <label className="block text-[#313131] font-semibold mb-2">Domain</label>
+              <label className="block text-foreground font-semibold mb-2">Domain</label>
               <select
                 name="details"
                 value={formData.details}
                 onChange={(e) => handleDetailChange(e.target.value)}
-                className="w-full p-2 rounded-lg bg-transparent border border-[#313131] focus:outline-none focus:ring-2 focus:ring-[#313131]"
+                className="input-field"
                 required
               >
-                <option value="">Select a domain</option>
+                <option value="" className="bg-background text-foreground">Select a domain</option>
                 {domainOptions.map((domain) => (
-                  <option key={domain} value={domain}>
+                  <option key={domain} value={domain} className="bg-background text-foreground">
                     {domain}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-[#313131] font-semibold mb-2">Skills</label>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+              <label className="block text-foreground font-semibold mb-2">Skills</label>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-background rounded-lg border border-border"> {/* Added bg-background, rounded-lg, border-border */}
                 {skillOptions.map((skill) => (
-                  <label key={skill} className="flex items-center text-[#313131]">
+                  <label key={skill} className="flex items-center text-foreground">
                     <input
                       type="checkbox"
                       checked={formData.skills.includes(skill)}
                       onChange={() => handleSkillChange(skill)}
-                      className="mr-2"
+                      className="mr-2 accent-primary"
                     />
                     {skill}
                   </label>
@@ -134,13 +135,13 @@ export default function PostJob() {
               </div>
             </div>
             <div>
-              <label className="block text-[#313131] font-semibold mb-2">Salary</label>
+              <label className="block text-foreground font-semibold mb-2">Salary</label>
               <input
                 type="text"
                 name="salary"
                 value={formData.salary}
                 onChange={handleInputChange}
-                className="w-full p-2 rounded-lg bg-transparent border border-[#313131] focus:outline-none focus:ring-2 focus:ring-[#313131]"
+                className="input-field"
                 placeholder="e.g., $60,000 - $80,000"
                 required
               />
@@ -149,13 +150,26 @@ export default function PostJob() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`text-sm px-6 py-2 rounded-lg transition duration-200 ${
+                className={`btn-primary ${
                   isSubmitting
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-[#313131] text-white hover:bg-[#4a4a4a]"
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
                 }`}
               >
-                {isSubmitting ? "Submitting..." : "Submit"}
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-background" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Submitting...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Plus className="h-5 w-5" />
+                    Submit Job
+                  </span>
+                )}
               </button>
             </div>
           </form>

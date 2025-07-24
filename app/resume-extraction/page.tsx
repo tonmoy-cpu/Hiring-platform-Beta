@@ -20,7 +20,7 @@ export default function ResumeExtraction() {
 
   const handleExtract = async () => {
     if (!resumeFile) {
-      showToast("Please upload a resume file");
+      toast.error("Please upload a resume file"); // Use toast
       return;
     }
 
@@ -39,11 +39,11 @@ export default function ResumeExtraction() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.msg || "Extraction failed");
       setParsedData(data.parsedData);
-      showToast("Resume parsed and added to your profile!");
+      toast.success("Resume parsed and added to your profile!"); // Use toast
     } catch (err) {
       console.error("Error extracting resume:", err.message);
       setError(err.message);
-      showToast(`Error: ${err.message}`);
+      toast.error(`Error: ${err.message}`); // Use toast
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +51,7 @@ export default function ResumeExtraction() {
 
   const handleAnalyze = async () => {
     if (!jobId || !parsedData) {
-      showToast("Please enter a job ID and extract a resume first.");
+      toast.error("Please enter a job ID and extract a resume first."); // Use toast
       return;
     }
 
@@ -70,23 +70,23 @@ export default function ResumeExtraction() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      showToast("Resume analyzed successfully!");
+      toast.success("Resume analyzed successfully!"); // Use toast
       console.log("Analysis result:", data); // Display or handle result (e.g., modal)
     } catch (err) {
       console.error("Analysis failed:", err.message);
-      showToast(`Analysis failed: ${err.message}`);
+      toast.error(`Analysis failed: ${err.message}`); // Use toast
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#373737]">
+    <div className="min-h-screen flex flex-col bg-background"> {/* Use bg-background */}
       <Navbar />
       <main className="flex-1 p-6">
-        <div className="bg-[#313131] p-6 rounded-lg mb-8 shadow-md">
-          <h1 className="text-3xl font-semibold text-center uppercase text-white">Resume Extraction</h1>
+        <div className="bg-accent p-6 rounded-lg mb-8 shadow-md"> {/* Use bg-accent */}
+          <h1 className="text-3xl font-semibold text-center uppercase text-foreground">Resume Extraction</h1> {/* Use text-foreground */}
         </div>
-        <div className="bg-[#d9d9d9] p-8 rounded-lg shadow-md">
-          <label htmlFor="resume" className="block text-[#313131] font-semibold mb-2">
+        <div className="bg-secondary p-8 rounded-lg shadow-md text-dark-contrast"> {/* Use bg-secondary and text-dark-contrast */}
+          <label htmlFor="resume" className="block font-semibold mb-2">
             Upload Resume (PDF)
           </label>
           <input
@@ -94,21 +94,21 @@ export default function ResumeExtraction() {
             id="resume"
             accept=".pdf"
             onChange={handleFileChange}
-            className="w-full p-2 rounded-lg border border-[#313131] text-[#313131]"
+            className="input-field" // Use input-field
             disabled={isLoading}
           />
           <button
             onClick={handleExtract}
-            className="submit-button mt-4"
+            className="btn-primary mt-4" // Use btn-primary
             disabled={isLoading}
           >
             {isLoading ? "Extracting..." : "Extract"}
           </button>
-          {error && <p className="text-red-500 mt-4">{error}</p>}
+          {error && <p className="text-danger mt-4">{error}</p>} {/* Use text-danger */}
         </div>
         {parsedData && (
-          <div className="mt-8 bg-[#d9d9d9] p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold text-[#313131] mb-4">Parsed Resume</h2>
+          <div className="mt-8 bg-secondary p-6 rounded-lg shadow-md text-dark-contrast"> {/* Use bg-secondary and text-dark-contrast */}
+            <h2 className="text-xl font-bold text-text-dark mb-4">Parsed Resume</h2> {/* Use text-dark */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-bold">Contact</h3>
@@ -153,11 +153,11 @@ export default function ResumeExtraction() {
                 value={jobId}
                 onChange={(e) => setJobId(e.target.value)}
                 placeholder="Enter Job ID to Analyze"
-                className="w-full p-2 rounded-lg border border-[#313131] text-[#313131] mb-2"
+                className="input-field mb-2" // Use input-field
               />
               <button
                 onClick={handleAnalyze}
-                className="submit-button mt-2"
+                className="btn-primary mt-2" // Use btn-primary
                 disabled={isLoading}
               >
                 Analyze Resume
@@ -168,8 +168,4 @@ export default function ResumeExtraction() {
       </main>
     </div>
   );
-}
-
-function showToast(message) {
-  window.dispatchEvent(new CustomEvent("show-toast", { detail: message }));
 }

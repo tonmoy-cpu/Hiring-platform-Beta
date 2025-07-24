@@ -84,11 +84,16 @@ export default function TrackApplications() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#373737]">
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Use bg-background */}
       <Navbar userType="candidate" />
       <main className="flex-1 p-6">
-        <div className="bg-[#313131] p-6 rounded-lg mb-8 shadow-md">
-          <h1 className="text-3xl font-semibold text-center uppercase text-white">Track Applications</h1>
+        <div className="bg-accent p-6 rounded-lg mb-8 shadow-md">
+          {/* Use bg-accent */}
+          <h1 className="text-3xl font-semibold text-center uppercase text-foreground">
+            Track Applications
+          </h1>
+          {/* Use text-foreground */}
         </div>
         <div className="space-y-6">
           {applications.length > 0 ? (
@@ -98,38 +103,41 @@ export default function TrackApplications() {
                 app.candidate.resumeParsed?.skills || []
               );
               return (
-                <div key={app._id} className="bg-[#d9d9d9] p-4 rounded-lg shadow-md">
+                <div key={app._id} className="card">
+                  {/* Use card class */}
                   <div className="flex items-center">
-                    <CircleUser className="h-10 w-10 text-[#313131] mr-4" />
-                    <div className="flex-1 text-[#313131]">
+                    <CircleUser className="h-10 w-10 text-primary mr-4" />{" "}
+                    {/* Use text-primary */}
+                    <div className="flex-1 text-foreground">
+                      {/* Use text-foreground */}
                       <p className="font-bold text-lg">{app.job.title}</p>
                       <p className="text-sm">Domain: {app.job.details}</p>
                       <p className="text-xs mt-1">Status: {app.status}</p>
                     </div>
-                    <button
-                      onClick={() => handleAnalyze(app.job._id)}
-                      className="p-2 rounded-full bg-[#313131] hover:bg-[#4a4a4a] transition"
-                    >
-                      <FileText className="h-5 w-5 text-white" />
+                    <button onClick={() => handleAnalyze(app.job._id)} className="btn-icon">
+                      {/* Use btn-icon */}
+                      <FileText className="h-5 w-5" />
                     </button>
                   </div>
-                  <div className="mt-2">
-                    <p className="text-[#313131] font-semibold">Missing Skills:</p>
+                  <div className="mt-2 text-foreground">
+                    {/* Use text-foreground */}
+                    <p className="font-semibold">Missing Skills:</p>
                     {missingSkills.length > 0 ? (
-                      <ul className="list-disc pl-4 text-[#313131]">
+                      <ul className="list-disc pl-4">
                         {missingSkills.map((skill) => (
                           <li key={skill}>{skill}</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-[#313131]">None</p>
+                      <p>None</p>
                     )}
                   </div>
                 </div>
               );
             })
           ) : (
-            <p className="text-center text-white">No applications found.</p>
+            <p className="text-center text-foreground">No applications found.</p>
+            /* Use text-foreground */
           )}
         </div>
       </main>

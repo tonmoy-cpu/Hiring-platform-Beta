@@ -29,9 +29,10 @@ export default function RecruiterDashboard() {
       router.push("/dashboard");
       return;
     }
-    if (pathname !== "/recruiter/dashboard") {
-      router.push("/recruiter/dashboard");
-    }
+    // No need to push to /recruiter/dashboard if already there, causes infinite loop
+    // if (pathname !== "/recruiter/dashboard") {
+    //   router.push("/recruiter/dashboard");
+    // }
   }, [pathname, router]);
 
   const fetchJobs = async () => {
@@ -169,7 +170,7 @@ export default function RecruiterDashboard() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white">Loading your dashboard...</p>
+            <p className="text-foreground">Loading your dashboard...</p> {/* Use text-foreground */}
           </div>
         </div>
       </div>
@@ -177,12 +178,12 @@ export default function RecruiterDashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background" key={pathname}>
+    <div className="min-h-screen flex flex-col bg-background" key={pathname}> {/* Use bg-background */}
       <Navbar userType="recruiter" />
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-        <div className="bg-accent p-8 rounded-lg mb-8 shadow-md relative overflow-hidden">
+        <div className="bg-accent p-8 rounded-lg mb-8 shadow-md relative overflow-hidden"> {/* Use bg-accent */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary opacity-10 rounded-full transform translate-x-1/3 -translate-y-1/3"></div>
-          <h1 className="text-3xl font-bold text-white mb-2 relative z-10">Recruiter Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2 relative z-10">Recruiter Dashboard</h1> {/* Use text-foreground */}
           <p className="text-gray-300 max-w-2xl relative z-10">
             Manage your job postings, track applicants, and find the perfect candidates for your positions.
           </p>
@@ -190,43 +191,43 @@ export default function RecruiterDashboard() {
 
         {/* Stats Section */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
-          <div className="card p-6 flex items-center">
+          <div className="card p-6 flex items-center"> {/* Use card class */}
             <div className="p-3 rounded-full bg-primary bg-opacity-20 mr-4">
               <Briefcase className="h-6 w-6 text-primary" />
             </div>
             <div>
               <p className="text-gray-400 text-sm">Total Jobs</p>
-              <p className="text-2xl font-bold text-white">{stats.totalJobs}</p>
+              <p className="text-2xl font-bold text-foreground">{stats.totalJobs}</p> {/* Use text-foreground */}
             </div>
           </div>
           
-          <div className="card p-6 flex items-center">
+          <div className="card p-6 flex items-center"> {/* Use card class */}
             <div className="p-3 rounded-full bg-success bg-opacity-20 mr-4">
               <Clock className="h-6 w-6 text-success" />
             </div>
             <div>
               <p className="text-gray-400 text-sm">Active Jobs</p>
-              <p className="text-2xl font-bold text-white">{stats.activeJobs}</p>
+              <p className="text-2xl font-bold text-foreground">{stats.activeJobs}</p> {/* Use text-foreground */}
             </div>
           </div>
           
-          <div className="card p-6 flex items-center">
+          <div className="card p-6 flex items-center"> {/* Use card class */}
             <div className="p-3 rounded-full bg-info bg-opacity-20 mr-4">
               <Users className="h-6 w-6 text-info" />
             </div>
             <div>
               <p className="text-gray-400 text-sm">Total Applicants</p>
-              <p className="text-2xl font-bold text-white">{stats.totalApplicants}</p>
+              <p className="text-2xl font-bold text-foreground">{stats.totalApplicants}</p> {/* Use text-foreground */}
             </div>
           </div>
           
-          <div className="card p-6 flex items-center">
+          <div className="card p-6 flex items-center"> {/* Use card class */}
             <div className="p-3 rounded-full bg-warning bg-opacity-20 mr-4">
               <BarChart className="h-6 w-6 text-warning" />
             </div>
             <div>
               <p className="text-gray-400 text-sm">New Applicants</p>
-              <p className="text-2xl font-bold text-white">{stats.newApplicants}</p>
+              <p className="text-2xl font-bold text-foreground">{stats.newApplicants}</p> {/* Use text-foreground */}
             </div>
           </div>
         </section>
@@ -234,15 +235,15 @@ export default function RecruiterDashboard() {
         {/* Quick Actions */}
         <section className="mb-8 animate-fade-in" style={{animationDelay: "0.1s"}}>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-white">Quick Actions</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Quick Actions</h2> {/* Use text-foreground */}
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <Link href="/recruiter/post-job" className="card hover:border-primary group">
+            <Link href="/recruiter/post-job" className="card hover:border-primary group"> {/* Use card class */}
               <div className="p-3 rounded-full bg-primary bg-opacity-20 inline-block mb-4 group-hover:bg-primary group-hover:bg-opacity-30 transition-all">
                 <Plus className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors mb-2">
+              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2"> {/* Use text-foreground */}
                 Post New Job
               </h3>
               <p className="text-sm text-gray-300">
@@ -250,11 +251,11 @@ export default function RecruiterDashboard() {
               </p>
             </Link>
             
-            <Link href="/recruiter/track-applicants" className="card hover:border-primary group">
+            <Link href="/recruiter/track-applicants" className="card hover:border-primary group"> {/* Use card class */}
               <div className="p-3 rounded-full bg-primary bg-opacity-20 inline-block mb-4 group-hover:bg-primary group-hover:bg-opacity-30 transition-all">
                 <Users className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors mb-2">
+              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2"> {/* Use text-foreground */}
                 Track Applicants
               </h3>
               <p className="text-sm text-gray-300">
@@ -262,11 +263,11 @@ export default function RecruiterDashboard() {
               </p>
             </Link>
             
-            <Link href="/recruiter/analytics" className="card hover:border-primary group">
+            <Link href="/recruiter/analytics" className="card hover:border-primary group"> {/* Use card class */}
               <div className="p-3 rounded-full bg-primary bg-opacity-20 inline-block mb-4 group-hover:bg-primary group-hover:bg-opacity-30 transition-all">
                 <BarChart className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors mb-2">
+              <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2"> {/* Use text-foreground */}
                 Analytics
               </h3>
               <p className="text-sm text-gray-300">
@@ -279,7 +280,7 @@ export default function RecruiterDashboard() {
         {/* Your Job Postings */}
         <section className="space-y-6 animate-fade-in" style={{animationDelay: "0.2s"}}>
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-white">Your Job Postings</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Your Job Postings</h2> {/* Use text-foreground */}
             <Link href="/recruiter/post-job" className="btn-primary flex items-center gap-2">
               <Plus className="h-4 w-4" />
               <span>Post New Job</span>
@@ -291,7 +292,7 @@ export default function RecruiterDashboard() {
               {jobs.map((job, index) => (
                 <div
                   key={job._id}
-                  className="card recruiter-job-card"
+                  className="card recruiter-job-card" // Use card class
                   style={{animationDelay: `${index * 0.05}s`}}
                 >
                   {editingJob === job._id ? (
@@ -301,27 +302,27 @@ export default function RecruiterDashboard() {
                         name="title"
                         value={formData.title}
                         onChange={handleChange}
-                        className="w-full p-3 rounded-lg bg-background border border-border text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="input-field" // Use input-field
                         placeholder="Job Title"
                       />
                       <select
                         name="details"
                         value={formData.details}
                         onChange={handleChange}
-                        className="w-full p-3 rounded-lg bg-background border border-border text-white focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="input-field" // Use input-field
                       >
-                        <option value="">Select a domain</option>
+                        <option value="" className="bg-background text-foreground">Select a domain</option> {/* Set option colors */}
                         {domainOptions.map((domain) => (
-                          <option key={domain} value={domain}>
+                          <option key={domain} value={domain} className="bg-background text-foreground">
                             {domain}
                           </option>
                         ))}
                       </select>
                       <div className="mb-4">
-                        <h3 className="font-bold text-white mb-2">Skills</h3>
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-3 bg-background rounded-lg">
+                        <h3 className="font-bold text-foreground mb-2">Skills</h3> {/* Use text-foreground */}
+                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-3 bg-background rounded-lg"> {/* Use bg-background */}
                           {skillOptions.map((skill) => (
-                            <label key={skill} className="flex items-center text-white hover:text-primary transition-colors">
+                            <label key={skill} className="flex items-center text-foreground hover:text-primary transition-colors"> {/* Use text-foreground */}
                               <input
                                 type="checkbox"
                                 checked={formData.skills.includes(skill)}
@@ -336,13 +337,13 @@ export default function RecruiterDashboard() {
                       <div className="flex space-x-3">
                         <button
                           onClick={() => handleSaveEdit(job._id)}
-                          className="btn-primary flex-1"
+                          className="btn-primary flex-1" // Use btn-primary
                         >
                           Save Changes
                         </button>
                         <button
                           onClick={() => setEditingJob(null)}
-                          className="btn-secondary flex-1"
+                          className="btn-secondary flex-1" // Use btn-secondary
                         >
                           Cancel
                         </button>
@@ -354,7 +355,7 @@ export default function RecruiterDashboard() {
                         <div className="p-3 rounded-lg bg-primary bg-opacity-20 mr-4">
                           <FileText className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="text-white flex-1">
+                        <div className="text-foreground flex-1"> {/* Use text-foreground */}
                           <div className="flex items-center gap-3">
                             <p className="font-bold text-lg">{job.title || "Untitled"}</p>
                             {job.isClosed && (
@@ -399,13 +400,21 @@ export default function RecruiterDashboard() {
                             </button>
                             <button
                               onClick={() => handleClose(job._id)}
-                              className="btn-icon"
+                              className="btn-icon text-danger hover:bg-danger hover:text-background" /* Use btn-icon and danger colors */
                               title="Close Job"
                             >
                               <X className="h-5 w-5" />
                             </button>
                           </>
                         )}
+                        {/* Added Delete button for recruiters */}
+                        <button
+                          onClick={() => handleDelete(job._id)}
+                          className="btn-icon text-danger hover:bg-danger hover:text-background"
+                          title="Delete Job"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
                       </div>
                     </div>
                   )}
@@ -413,11 +422,11 @@ export default function RecruiterDashboard() {
               ))}
             </div>
           ) : (
-            <div className="card text-center py-12">
+            <div className="card text-center py-12"> {/* Use card class */}
               <div className="mb-4 text-primary">
                 <Briefcase className="h-12 w-12 mx-auto opacity-50" />
               </div>
-              <p className="text-white mb-4">No jobs posted yet. Create your first job posting!</p>
+              <p className="text-foreground mb-4">No jobs posted yet. Create your first job posting!</p> {/* Use text-foreground */}
               <Link href="/recruiter/post-job" className="btn-primary inline-flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 <span>Post New Job</span>

@@ -17,10 +17,10 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="text-xl font-bold text-primary">Hire<span className="text-white">ON</span></div>
+          <div className="text-xl font-bold text-primary">Hire<span className="text-foreground">ON</span></div> {/* Use text-foreground */}
           <button 
             onClick={onClose}
-            className="btn-icon"
+            className="btn-icon" // Use btn-icon
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
@@ -31,7 +31,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
           <Link 
             href={userType === "recruiter" ? "/recruiter/dashboard" : "/dashboard"} 
             onClick={onClose}
-            className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+            className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
           >
             <Home className="h-5 w-5" />
             <span>Dashboard</span>
@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/jobs" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <Briefcase className="h-5 w-5" />
                 <span>Browse Jobs</span>
@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/resume-extraction" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <FileText className="h-5 w-5" />
                 <span>Resume Extraction</span>
@@ -60,7 +60,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/track-applications" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <BarChart className="h-5 w-5" />
                 <span>Track Applications</span>
@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/recruiter/post-job" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <PlusCircle className="h-5 w-5" />
                 <span>Post Job</span>
@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/recruiter/track-applicants" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <FileText className="h-5 w-5" />
                 <span>Track Applicants</span>
@@ -89,7 +89,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
               <Link 
                 href="/recruiter/analytics" 
                 onClick={onClose}
-                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+                className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
               >
                 <BarChart className="h-5 w-5" />
                 <span>Analytics</span>
@@ -101,7 +101,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
             <Link 
               href="/profile" 
               onClick={onClose}
-              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
             >
               <User className="h-5 w-5" />
               <span>Profile</span>
@@ -110,7 +110,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
             <Link 
               href="/settings" 
               onClick={onClose}
-              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
             >
               <Settings className="h-5 w-5" />
               <span>Settings</span>
@@ -119,7 +119,7 @@ export default function Sidebar({ isOpen, onClose, userType = "candidate" }: Sid
             <Link 
               href="/help" 
               onClick={onClose}
-              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-white hover:text-primary"
+              className="flex items-center gap-3 py-3 px-4 hover:bg-primary hover:bg-opacity-10 rounded-lg transition-all text-foreground hover:text-primary" // Use text-foreground
             >
               <HelpCircle className="h-5 w-5" />
               <span>Help & Support</span>
