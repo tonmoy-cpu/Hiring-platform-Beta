@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // Import useRef
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import io from "socket.io-client";
@@ -24,12 +24,13 @@ export default function Jobs() {
   const [coverLetter, setCoverLetter] = useState("");
   const [analysisResult, setAnalysisResult] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useState(""); // Keep for controlled component behavior
   const [attachment, setAttachment] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [socket, setSocket] = useState(null);
   const [showResumeBuilder, setShowResumeBuilder] = useState(false);
   const router = useRouter();
+  const messageInputRef = useRef(null); // Ref for the message textarea
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -188,6 +189,13 @@ export default function Jobs() {
   };
 
   const openChat = async (applicationId) => {
+    console.log("--- DEBUG: openChat called with applicationId:", applicationId); // DEBUG LOG
+    if (!applicationId) {
+      toast.error("Cannot open chat: Application ID is missing or invalid.");
+      console.error("Attempted to open chat with missing application ID.");
+      return;
+    }
+
     setChatMessages([]); // Clear messages before fetching new ones
     const token = localStorage.getItem("token");
     try {
@@ -196,6 +204,7 @@ export default function Jobs() {
       });
       if (!res.ok) throw new Error("Failed to load chat");
       const chat = await res.json();
+      console.log("--- DEBUG: Chat object received in openChat:", chat); // DEBUG LOG
       setShowChatModal(chat);
       setChatMessages(chat.messages); // Set messages with fetched data
       socket.emit("joinChat", chat._id);
@@ -210,27 +219,58 @@ export default function Jobs() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage && !attachment) return;
+    console.log("--- DEBUG: sendMessage called."); // DEBUG LOG
+    // Get the current value directly from the textarea using the ref
+    const messageText = messageInputRef.current ? messageInputRef.current.value.trim() : '';
+
+    if (!messageText && !attachment) {
+      toast.error("Message content or attachment is required."); // More specific error
+      return;
+    }
+    if (!showChatModal || !showChatModal.application) { // Ensure application ID is available
+      toast.error("Chat context missing. Please reopen the chat.");
+      console.error("showChatModal or showChatModal.application is missing:", showChatModal); // Debug log
+      return;
+    }
+
     const token = localStorage.getItem("token");
     const formData = new FormData();
-    if (newMessage) formData.append("content", newMessage);
+    
+    // Only append content if messageText has a value
+    if (messageText) {
+      formData.append("content", messageText);
+    } else if (!attachment) {
+        // If no text and no attachment, prevent sending (should be caught by initial check but good for redundancy)
+        toast.error("Message content or attachment is required.");
+        return;
+    }
+
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal._id}`, {
+      // THIS IS THE CRITICAL LINE: Use showChatModal.application (Application ID)
+      const targetUrl = `http://localhost:5000/api/chat/${showChatModal.application}`;
+      console.log("--- DEBUG: Chat URL Construction V4 - Attempting to send message to URL:", targetUrl); // CRITICAL DEBUG LOG
+      console.log("--- DEBUG: showChatModal content for sendMessage V4:", showChatModal); // CRITICAL DEBUG LOG
+      const res = await fetch(targetUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) throw new Error("Failed to send message");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to send message: ${errorText}`); // Include backend error message
+      }
       const message = await res.json();
       
       // Optimistically add the message to the chatMessages state
       setChatMessages((prev) => [...prev, message]);
 
-      // Emit the message via socket (server will broadcast it, but we already updated locally)
-      socket.emit("sendMessage", { chatId: showChatModal._id, message });
-      setNewMessage("");
+      // Clear the textarea using the ref
+      if (messageInputRef.current) {
+        messageInputRef.current.value = '';
+      }
+      setNewMessage(""); // Also clear the state for controlled component behavior
       setAttachment(null);
     } catch (err) {
       toast.error(`Error sending message: ${err.message}`);
@@ -240,6 +280,10 @@ export default function Jobs() {
   const closeChatModal = () => {
     setShowChatModal(null);
     setChatMessages([]); // Clear messages when closing the modal
+    if (messageInputRef.current) { // Clear input on close
+      messageInputRef.current.value = '';
+    }
+    setNewMessage(""); // Reset state too
   };
 
   const filteredJobs = jobs.filter((job) => {
@@ -341,14 +385,20 @@ export default function Jobs() {
                 >
                   Analyze Resume
                 </button>
-                {appliedJobs.includes(job._id) && (
-                  <button
-                    onClick={() => openChat(applications.find((app) => app.job._id === job._id)?._id)}
-                    className="btn-secondary" /* Use btn-secondary */
-                  >
-                    Chat
-                  </button>
-                )}
+                {/* Modified Chat button to ensure valid applicationId */}
+                <button
+                  onClick={() => {
+                    const matchingApp = applications.find((app) => app.job._id === job._id);
+                    if (matchingApp) {
+                      openChat(matchingApp._id);
+                    } else {
+                      toast.error("Chat not available for this job yet. Please apply first!");
+                    }
+                  }}
+                  className="btn-secondary" /* Use btn-secondary */
+                >
+                  Chat
+                </button>
                 <button
                   onClick={() => (appliedJobs.includes(job._id) ? null : setShowApplyModal(job))}
                   disabled={appliedJobs.includes(job._id) || job.isClosed}
@@ -507,8 +557,9 @@ export default function Jobs() {
                 ))}
               </div>
               <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                ref={messageInputRef} // Attach ref here
+                value={newMessage} // Value controlled by state
+                onChange={(e) => setNewMessage(e.target.value)} // Update state on change
                 className="input-field" /* Use input-field */
                 placeholder="Type a message..."
               />

@@ -1,107 +1,85 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const path = require("path");
-const http = require("http");
-const socketIo = require("socket.io");
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const http = require('http');
+const socketIo = require('socket.io');
+const multer = require('multer'); // Import multer
+const path = require('path'); // Import path for directory handling
+const fs = require('fs'); // Import fs for directory creation
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "http://localhost:3000" } });
-
-app.use(cors({ origin: "http://localhost:3000" }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use("/Uploads", express.static(path.join(__dirname, "Uploads")));
-
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
-
-// Ensure routes are loaded before catch-all
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/jobs", require("./routes/jobs"));
-app.use("/api/applications", require("./routes/applications"));
-app.use("/api/resume", require("./routes/resume"));
-app.use("/api/chat", require("./routes/chat"));
-
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) return next(new Error("Authentication error"));
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.user = decoded.user;
-    next();
-  } catch (err) {
-    next(new Error("Authentication error"));
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000", // Your frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   }
 });
 
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id, "User ID:", socket.user.id);
+// Make io accessible to routes
+app.set('io', io);
 
-  socket.on("joinChat", (chatId) => {
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  socket.on('joinChat', (chatId) => {
     socket.join(chatId);
-    console.log(`User ${socket.id} joined chat ${chatId}`);
+    console.log(`Socket ${socket.id} joined chat room: ${chatId}`);
   });
 
-  socket.on("sendMessage", async ({ chatId, message }) => {
-    try {
-      const Chat = require("./models/Chat");
-      const Application = require("./models/Application");
-      const chat = await Chat.findById(chatId);
-      if (!chat) throw new Error("Chat not found");
-
-      const application = await Application.findById(chat.application).populate("job candidate");
-      const recipientId =
-        socket.user.id === application.candidate._id.toString()
-          ? application.job.recruiter.toString()
-          : application.candidate._id.toString();
-
-      chat.messages.push(message);
-      await chat.save();
-      io.to(chatId).emit("message", message);
-      io.to(recipientId).emit("notification", { chatId, message });
-    } catch (err) {
-      console.error("Error sending message:", err);
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 
-// Move catch-all to the end to avoid intercepting valid routes
-app.use((req, res) => {
-  console.log("Catch-all triggered for:", req.path);
-  res.status(404).json({ msg: "Route not found" });
-});
+// Middleware
+app.use(cors({
+  origin: "http://localhost:3000",
+  credentials: true
+}));
+app.use(express.json()); // For parsing application/json
+app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
-app.use((err, req, res, next) => {
-  console.error("Server error:", err.stack);
-  res.status(500).json({ msg: "Server error", error: err.message });
-});
-
-// Validate environment variables
-const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "NANONETS_API_KEY", "NANONETS_MODEL_ID", "HF_API_KEY", "GEMINI_API_KEY"];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`Missing environment variable: ${envVar}`);
-    process.exit(1);
-  }
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+  console.log('Uploads directory created');
+}
+const resumesDir = path.join(uploadsDir, 'resumes');
+if (!fs.existsSync(resumesDir)) {
+  fs.mkdirSync(resumesDir);
+  console.log('Uploads/resumes directory ready');
 }
 
-mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);
-  });
+// Serve static files from 'uploads' directory
+app.use('/uploads', express.static(uploadsDir));
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
+
+// Import Routes
+const authRoutes = require('./routes/auth');
+const jobRoutes = require('./routes/jobs');
+const applicationRoutes = require('./routes/applications');
+const resumeRoutes = require('./routes/resume');
+const chatRoutes = require('./routes/chat'); // Will be updated to use multer
+
+// Use Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/resume', resumeRoutes);
+app.use('/api/chat', chatRoutes); // Chat routes will now handle multer internally
 
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

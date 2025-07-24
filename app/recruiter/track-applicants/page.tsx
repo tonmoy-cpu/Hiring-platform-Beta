@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { CircleUser, FileText, MoreHorizontal, MessageSquare, X } from "lucide-react"; // X was missing here
+import { CircleUser, FileText, MoreHorizontal, MessageSquare, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,7 @@ export default function TrackApplicants() {
   const [notifications, setNotifications] = useState([]);
   const [socket, setSocket] = useState(null);
   const router = useRouter();
+  // Removed messageInputRef, relying solely on newMessage state for textarea content
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -51,10 +52,8 @@ export default function TrackApplicants() {
     socketInstance.on("connect", () => console.log("Socket connected"));
     socketInstance.on("connect_error", (err) => console.error("Socket error:", err));
     socketInstance.on("message", (message) => {
-      // Only append if the chat modal for this chat is currently open
       if (showChatModal && showChatModal._id === message.chatId) {
         setChatMessages((prev) => {
-          // Prevent adding duplicate messages from socket if already optimistically added
           const isDuplicate = prev.some(
             (m) => m._id === message._id || (m.content === message.content && m.timestamp === message.timestamp)
           );
@@ -70,7 +69,7 @@ export default function TrackApplicants() {
     });
 
     return () => {
-      socketInstance.off("message"); // Explicitly turn off the listener
+      socketInstance.off("message");
       socketInstance.off("notification");
       socketInstance.off("connect");
       socketInstance.off("connect_error");
@@ -117,7 +116,8 @@ export default function TrackApplicants() {
   };
 
   const handleChat = async (app) => {
-    setChatMessages([]); // Clear messages before fetching new ones
+    console.log("--- DEBUG: handleChat called with app:", app); // DEBUG LOG
+    setChatMessages([]);
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`http://localhost:5000/api/chat/${app._id}`, {
@@ -125,8 +125,9 @@ export default function TrackApplicants() {
       });
       if (!res.ok) throw new Error("Failed to load chat");
       const chat = await res.json();
+      console.log("--- DEBUG: Chat object received in handleChat:", chat); // DEBUG LOG
       setShowChatModal(chat);
-      setChatMessages(chat.messages); // Set messages with fetched data
+      setChatMessages(chat.messages);
       socket.emit("joinChat", chat._id);
 
       await fetch(`http://localhost:5000/api/chat/${chat._id}/read`, {
@@ -139,26 +140,49 @@ export default function TrackApplicants() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage && !attachment) return;
+    console.log("--- DEBUG: sendMessage called."); // DEBUG LOG
+    const messageText = newMessage.trim(); // Directly use the state variable
+
+    if (!messageText && !attachment) {
+      toast.error("Message content or attachment is required.");
+      return;
+    }
+    if (!showChatModal || !showChatModal.application) { // Ensure application ID is available
+      toast.error("Chat context missing. Please reopen the chat.");
+      console.error("showChatModal or showChatModal.application is missing:", showChatModal); // Debug log
+      return;
+    }
+
     const token = localStorage.getItem("token");
     const formData = new FormData();
-    if (newMessage) formData.append("content", newMessage);
+    
+    if (messageText) { // Only append if messageText has actual text
+      formData.append("content", messageText);
+    } else if (!attachment) {
+        toast.error("Message content or attachment is required.");
+        return;
+    }
+
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal._id}`, {
+      const targetUrl = `http://localhost:5000/api/chat/${showChatModal.application}`;
+      console.log("--- DEBUG: Chat URL Construction V3 - Attempting to send message to URL:", targetUrl); // CRITICAL DEBUG LOG
+      console.log("--- DEBUG: showChatModal content for sendMessage V3:", showChatModal); // CRITICAL DEBUG LOG
+      const res = await fetch(targetUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      if (!res.ok) throw new Error("Failed to send message");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to send message: ${errorText}`);
+      }
       const message = await res.json();
       
-      // Optimistically add the message to the chatMessages state
       setChatMessages((prev) => [...prev, message]);
 
-      // Emit the message via socket (server will broadcast it, but we already updated locally)
-      socket.emit("sendMessage", { chatId: showChatModal._id, message });
+      // Clear the textarea by resetting the state
       setNewMessage("");
       setAttachment(null);
     } catch (err) {
@@ -168,7 +192,8 @@ export default function TrackApplicants() {
 
   const closeChatModal = () => {
     setShowChatModal(null);
-    setChatMessages([]); // Clear messages when closing the modal
+    setChatMessages([]);
+    setNewMessage(""); // Reset state too
   };
 
   const handleAnalyze = async (app) => {
@@ -239,33 +264,26 @@ export default function TrackApplicants() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Use bg-background */}
       <Navbar userType="recruiter" />
       <main className="flex-1 p-6">
         <div className="bg-accent p-6 rounded-lg mb-8 shadow-md">
-          {/* Use bg-accent */}
           <h1 className="text-3xl font-semibold text-center uppercase text-foreground">
             Track Applicants
           </h1>
-          {/* Use text-foreground */}
         </div>
         <div className="space-y-6">
           {applications.length > 0 ? (
             applications.map((app) => (
               <div key={app._id} className="card">
-                {/* Use card class */}
                 <div className="flex items-center">
-                  <CircleUser className="h-10 w-10 text-primary mr-4" />{" "}
-                  {/* Use text-primary */}
+                  <CircleUser className="h-10 w-10 text-primary mr-4" />
                   <div className="flex-1 text-foreground">
-                    {/* Use text-foreground */}
                     <p className="font-bold text-lg">{app.candidate.username}</p>
                     <p className="text-sm">{app.job.title}</p>
                     <p className="text-xs">Current Status: {app.status}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button onClick={() => handleChat(app)} className="btn-icon" title="Chat">
-                      {/* Use btn-icon */}
                       <MessageSquare className="h-5 w-5" />
                     </button>
                     <button
@@ -273,7 +291,6 @@ export default function TrackApplicants() {
                       className="btn-icon"
                       title="Analyze with AI"
                     >
-                      {/* Use btn-icon */}
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                     <button
@@ -281,7 +298,6 @@ export default function TrackApplicants() {
                       className="btn-icon"
                       title="Details"
                     >
-                      {/* Use btn-icon */}
                       <FileText className="h-5 w-5" />
                     </button>
                   </div>
@@ -292,26 +308,20 @@ export default function TrackApplicants() {
                     onChange={(e) => handleStatusChange(app._id, e.target.value)}
                     className="input-field mb-2"
                   >
-                    {/* Use input-field */}
                     <option value="Applied" className="bg-background text-foreground">
                       Applied
                     </option>
-                    {/* Set option colors */}
                     <option value="Under Review" className="bg-background text-foreground">
                       Under Review
                     </option>
-                    {/* Set option colors */}
                     <option value="Selected" className="bg-background text-foreground">
                       Selected
                     </option>
-                    {/* Set option colors */}
                     <option value="Not Selected" className="bg-background text-foreground">
                       Not Selected
                     </option>
-                    {/* Set option colors */}
                   </select>
                   <button onClick={() => handleSubmitStatus(app._id)} className="btn-primary w-full">
-                    {/* Use btn-primary */}
                     Submit
                   </button>
                 </div>
@@ -319,17 +329,14 @@ export default function TrackApplicants() {
             ))
           ) : (
             <p className="text-center text-foreground">No applicants found.</p>
-            /* Use text-foreground */
           )}
         </div>
 
         {showChatModal && (
           <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 modal">
             <div className="bg-accent p-6 rounded-lg shadow-lg w-full max-w-lg modal-content">
-              {/* Use bg-accent */}
               <h2 className="text-xl font-bold text-primary mb-4">Chat with Candidate</h2>
               <div className="h-64 overflow-y-auto mb-4 bg-background p-2 rounded">
-                {/* Use bg-background */}
                 {chatMessages.map((msg, index) => (
                   <div
                     key={index}
@@ -338,14 +345,12 @@ export default function TrackApplicants() {
                     }`}
                   >
                     <p className="text-foreground">{msg.content}</p>
-                    {/* Use text-foreground */}
                     {msg.attachment && (
                       <a
                         href={`http://localhost:5000${msg.attachment}`}
                         target="_blank"
                         className="text-info underline"
                       >
-                        {/* Use text-info */}
                         {msg.attachmentType === "link"
                           ? msg.content
                           : `Attachment (${msg.attachmentType})`}
@@ -353,14 +358,13 @@ export default function TrackApplicants() {
                     )}
                     <span className="text-xs text-gray-400">
                       {new Date(msg.timestamp).toLocaleTimeString()}
-                    </span>{" "}
-                    {/* Use gray-400 */}
+                    </span>
                   </div>
                 ))}
               </div>
               <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                value={newMessage} // Value controlled by state
+                onChange={(e) => setNewMessage(e.target.value)} // Update state on change
                 className="input-field"
                 placeholder="Type a message..."
               />
@@ -370,14 +374,11 @@ export default function TrackApplicants() {
                 onChange={(e) => setAttachment(e.target.files ? e.target.files[0] : null)}
                 className="mt-2 text-foreground"
               />
-              {/* Use text-foreground */}
               <div className="flex justify-end space-x-2 mt-2">
                 <button onClick={closeChatModal} className="btn-secondary">
-                  {/* Use btn-secondary */}
                   Close
                 </button>
                 <button onClick={sendMessage} className="btn-primary">
-                  {/* Use btn-primary */}
                   Send
                 </button>
               </div>
@@ -390,7 +391,6 @@ export default function TrackApplicants() {
             key={index}
             className="fixed top-4 right-4 bg-accent text-foreground p-4 rounded-lg shadow-lg z-50"
           >
-            {/* Use bg-accent and text-foreground */}
             New message in chat {notif.chatId}
           </div>
         ))}
@@ -399,13 +399,11 @@ export default function TrackApplicants() {
       {selectedApplicant && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 modal">
           <div className="bg-accent p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto modal-content">
-            {/* Use bg-accent */}
             <button
               onClick={() => setSelectedApplicant(null)}
               className="absolute top-2 right-2 btn-icon"
               title="Close"
             >
-              {/* Use btn-icon */}
               <X className="h-5 w-5" />
             </button>
             <h2 className="text-xl font-bold text-primary mb-4">
@@ -413,7 +411,6 @@ export default function TrackApplicants() {
             </h2>
             {analysis ? (
               <div className="mt-4 text-foreground">
-                {/* Use text-foreground */}
                 <h3 className="font-bold">AI Analysis</h3>
                 <p>
                   <strong>Score:</strong> {analysis.score}%
@@ -431,7 +428,6 @@ export default function TrackApplicants() {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-foreground">
-                  {/* Use text-foreground */}
                   <div>
                     <h3 className="font-bold">Contact</h3>
                     <p>
@@ -468,19 +464,16 @@ export default function TrackApplicants() {
                   </div>
                 </div>
                 <div className="mt-4 text-foreground">
-                  {/* Use text-foreground */}
                   <h3 className="font-bold">Cover Letter</h3>
                   <p>{selectedApplicant.coverLetter || "N/A"}</p>
                 </div>
                 <div className="mt-4 text-foreground">
-                  {/* Use text-foreground */}
                   <h3 className="font-bold">Resume</h3>
                   {selectedApplicant.candidate.resumeFile ? (
                     <button
                       onClick={() => handleDownloadResume(selectedApplicant.candidate._id)}
                       className="text-primary underline hover:text-primary-hover"
                     >
-                      {/* Use text-primary and hover */}
                       Download Resume
                     </button>
                   ) : (
@@ -490,7 +483,6 @@ export default function TrackApplicants() {
               </>
             )}
             <button onClick={() => setSelectedApplicant(null)} className="mt-4 btn-primary">
-              {/* Use btn-primary */}
               Close
             </button>
           </div>
