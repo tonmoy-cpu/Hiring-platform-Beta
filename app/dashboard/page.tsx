@@ -231,11 +231,12 @@ export default function Dashboard() {
     }
   };
 
-  const handleChat = async (applicationId) => {
+  const handleChat = async (application) => { // Modified to accept the application object directly
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${applicationId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      // Use application._id for fetching chat history
+      const res = await fetch(`http://localhost:5000/api/chat/${application._id}`, {
+        headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" }, // Added no-cache
       });
       if (!res.ok) throw new Error("Failed to load chat");
       const chat = await res.json();
@@ -260,14 +261,19 @@ export default function Dashboard() {
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal._id}`, {
+      // Use showChatModal.application (which is the applicationId) for the POST request
+      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal.application}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to send message");
-      const message = await res.json();
-      socket.emit("sendMessage", { chatId: showChatModal._id, message });
+      const sentMessage = await res.json(); // Get the message object from the backend response
+
+      // Optimistically update the chat messages state for instant display
+      setChatMessages((prev) => [...prev, sentMessage]);
+
+      socket.emit("sendMessage", { chatId: showChatModal._id, message: sentMessage });
       setNewMessage("");
       setAttachment(null);
     } catch (err) {
@@ -445,7 +451,7 @@ export default function Dashboard() {
                   </p>
                   <div className="flex justify-end">
                     <button
-                      onClick={() => handleChat(app._id)}
+                      onClick={() => handleChat(app)} // Pass the application object directly
                       className="btn-primary flex items-center gap-2"
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -648,7 +654,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-primary bg-opacity-20">
-                <MessageSquare className="h-5 w-5 text-primary" />
+                <MessageSquare className="h-5 w-5" />
               </div>
               <div>
                 <p className="font-medium">New Message</p>
