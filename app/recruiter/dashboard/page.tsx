@@ -43,7 +43,7 @@ export default function RecruiterDashboard() {
     }
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/jobs/recruiter", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/jobs/recruiter", {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
@@ -100,7 +100,7 @@ export default function RecruiterDashboard() {
     if (!confirm("Are you sure you want to close this job?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}/close`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/jobs/${jobId}/close`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -126,7 +126,7 @@ export default function RecruiterDashboard() {
   const handleSaveEdit = async (jobId) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/jobs/${jobId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

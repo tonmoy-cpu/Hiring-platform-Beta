@@ -1,34 +1,69 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { skillOptions, domainOptions } from "@/lib/utils";
-import io from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import { Briefcase, FileText, BarChart, MessageSquare, ChevronRight, Clock, CheckCircle, AlertCircle, X } from 'lucide-react';
 import Link from "next/link";
 
+// Type definitions
+interface Job {
+  _id: string;
+  title: string;
+  details: string;
+  skills: string[];
+  salary?: string;
+  isClosed?: boolean;
+}
+
+interface Application {
+  _id: string;
+  job: Job;
+  status: 'Applied' | 'Under Review' | 'Selected' | 'Not Selected';
+  createdAt: string;
+}
+
+interface ChatMessage {
+  sender: string;
+  content: string;
+  timestamp: string;
+  attachment?: string;
+  attachmentType?: string;
+}
+
+interface Chat {
+  _id: string;
+  application: string;
+  messages: ChatMessage[];
+}
+
+interface Notification {
+  chatId: string;
+  message: ChatMessage;
+}
+
 export default function Dashboard() {
-  const [jobs, setJobs] = useState([]);
-  const [appliedJobs, setAppliedJobs] = useState([]);
-  const [applications, setApplications] = useState([]); // New state for applications
-  const [userSkills, setUserSkills] = useState([]);
-  const [preferredSkills, setPreferredSkills] = useState([]);
-  const [preferredDomains, setPreferredDomains] = useState([]);
-  const [hoveredJob, setHoveredJob] = useState(null);
-  const [showApplyModal, setShowApplyModal] = useState(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [preferredSkills, setPreferredSkills] = useState<string[]>([]);
+  const [preferredDomains, setPreferredDomains] = useState<string[]>([]);
+  const [hoveredJob, setHoveredJob] = useState<Job | null>(null);
+  const [showApplyModal, setShowApplyModal] = useState<Job | null>(null);
   const [showPreferencesPopup, setShowPreferencesPopup] = useState(false);
-  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [coverLetter, setCoverLetter] = useState("");
   const [hasPreferences, setHasPreferences] = useState(false);
   const [toastShown, setToastShown] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(null); // Chat modal state
-  const [chatMessages, setChatMessages] = useState([]); // Chat messages state
-  const [newMessage, setNewMessage] = useState(""); // New message input
-  const [attachment, setAttachment] = useState(null); // Attachment input
-  const [notifications, setNotifications] = useState([]); // Notifications state
-  const [socket, setSocket] = useState(null); // Socket.IO instance
+  const [showChatModal, setShowChatModal] = useState<Chat | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -39,20 +74,26 @@ export default function Dashboard() {
       return;
     }
 
-    const socketInstance = io("http://localhost:5000", { auth: { token } });
-    setSocket(socketInstance);
+    const socketInstance = io(
+  "https://hiring-platform-beta.onrender.com",
+  {
+    auth: { token }
+  }
+);
+
+setSocket(socketInstance);
 
     const fetchData = async () => {
       setIsLoading(true);
       try {
         const [profileRes, jobsRes, appsRes] = await Promise.all([
-          fetch("http://localhost:5000/api/auth/profile", {
+          fetch("https://hiring-platform-beta.onrender.com/api/auth/profile", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:5000/api/jobs", {
+          fetch("https://hiring-platform-beta.onrender.com/api/jobs", {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch("http://localhost:5000/api/applications", {
+          fetch("https://hiring-platform-beta.onrender.com/api/applications", {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -70,7 +111,7 @@ export default function Dashboard() {
         setPreferredDomains(profile.preferredDomains || []);
         setHasPreferences(profile.preferredSkills?.length > 0 || profile.preferredDomains?.length > 0);
         setJobs(jobsData);
-        setAppliedJobs(appsData.map((app) => app.job._id));
+        setAppliedJobs(appsData.map((app: any) => app.job._id));
         setApplications(appsData); // Set applications
 
         if (!profile.preferredSkills?.length && !profile.preferredDomains?.length && !toastShown) {
@@ -99,9 +140,10 @@ export default function Dashboard() {
           );
           setToastShown(true);
         }
-      } catch (err) {
-        toast.error("Failed to load dashboard data: " + err.message);
-        if (err.message.includes("401")) {
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to load dashboard data: " + errorMessage);
+        if (errorMessage.includes("401")) {
           localStorage.removeItem("token");
           router.push("/");
         }
@@ -134,17 +176,17 @@ export default function Dashboard() {
 
   // Rest of the component remains the same...
 
-  const getMissingSkills = (job) => {
-    return job.skills.filter((skill) => !userSkills.includes(skill));
+  const getMissingSkills = (job: Job): string[] => {
+    return job.skills.filter((skill: string) => !userSkills.includes(skill));
   };
 
-  const handleSkillChange = (skill) => {
+  const handleSkillChange = (skill: string): void => {
     setPreferredSkills((prev) =>
       prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
     );
   };
 
-  const handleDomainChange = (domain) => {
+  const handleDomainChange = (domain: string): void => {
     setPreferredDomains((prev) =>
       prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain]
     );
@@ -157,7 +199,7 @@ export default function Dashboard() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/auth/preferences", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/auth/preferences", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -168,22 +210,23 @@ export default function Dashboard() {
       if (!res.ok) throw new Error(`Failed to save preferences with status: ${res.status}`);
       setHasPreferences(true);
       setShowPreferencesPopup(false);
-      const jobsRes = await fetch("http://localhost:5000/api/jobs", {
+      const jobsRes = await fetch("https://hiring-platform-beta.onrender.com/api/jobs", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!jobsRes.ok) throw new Error(`Jobs refresh failed with status: ${jobsRes.status}`);
       setJobs(await jobsRes.json());
       toast.success("Preferences saved successfully!");
-    } catch (err) {
-      toast.error("Error saving preferences: " + err.message);
-      if (err.message.includes("401")) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error("Error saving preferences: " + errorMessage);
+      if (errorMessage.includes("401")) {
         localStorage.removeItem("token");
         router.push("/");
       }
     }
   };
 
-  const handleApply = async (jobId) => {
+  const handleApply = async (jobId: string): Promise<void> => {
     if (!resumeFile || !coverLetter) {
       toast.error("Please upload a resume and write a cover letter.");
       return;
@@ -198,7 +241,7 @@ export default function Dashboard() {
     formData.append("resume", resumeFile);
 
     try {
-      const extractRes = await fetch("http://localhost:5000/api/resume/extract", {
+      const extractRes = await fetch("https://hiring-platform-beta.onrender.com/api/resume/extract", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -206,7 +249,7 @@ export default function Dashboard() {
       if (!extractRes.ok) throw new Error(`Resume extraction failed with status: ${extractRes.status}`);
       const { resumeText } = await extractRes.json();
 
-      const applyRes = await fetch("http://localhost:5000/api/applications/apply", {
+      const applyRes = await fetch("https://hiring-platform-beta.onrender.com/api/applications/apply", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -217,71 +260,82 @@ export default function Dashboard() {
       if (!applyRes.ok) throw new Error(`Application submission failed with status: ${applyRes.status}`);
       const newApplication = await applyRes.json();
       setAppliedJobs((prev) => [...prev, jobId]);
-      setApplications((prev) => [...prev, newApplication]); // Update applications
+      setApplications((prev) => [...prev, newApplication]);
       setShowApplyModal(null);
       setResumeFile(null);
       setCoverLetter("");
       toast.success("Application submitted successfully!");
-    } catch (err) {
-      toast.error("Error applying: " + err.message);
-      if (err.message.includes("401")) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error("Error applying: " + errorMessage);
+      if (errorMessage.includes("401")) {
         localStorage.removeItem("token");
         router.push("/");
       }
     }
   };
 
-  const handleChat = async (application) => { // Modified to accept the application object directly
+  const handleChat = async (application: Application): Promise<void> => {
     const token = localStorage.getItem("token");
+    if (!token) return;
     try {
       // Use application._id for fetching chat history
-      const res = await fetch(`http://localhost:5000/api/chat/${application._id}`, {
-        headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" }, // Added no-cache
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${application._id}`, {
+        headers: { Authorization: `Bearer ${token}`, "Cache-Control": "no-cache" },
       });
       if (!res.ok) throw new Error("Failed to load chat");
       const chat = await res.json();
       setShowChatModal(chat);
       setChatMessages(chat.messages);
-      socket.emit("joinChat", chat._id);
+      socket?.emit("joinChat", chat._id);
 
-      await fetch(`http://localhost:5000/api/chat/${chat._id}/read`, {
+      await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${chat._id}/read`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (err) {
-      toast.error(`Error loading chat: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Error loading chat: ${errorMessage}`);
     }
   };
 
-  const sendMessage = async () => {
+  const sendMessage = async (): Promise<void> => {
     if (!newMessage && !attachment) return;
+    if (!showChatModal) {
+      toast.error("Chat not loaded");
+      return;
+    }
+
     const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/");
+      return;
+    }
+
     const formData = new FormData();
     if (newMessage) formData.append("content", newMessage);
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      // Use showChatModal.application (which is the applicationId) for the POST request
-      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal.application}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${showChatModal.application}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to send message");
-      const sentMessage = await res.json(); // Get the message object from the backend response
+      const sentMessage: ChatMessage = await res.json();
 
-      // Optimistically update the chat messages state for instant display
       setChatMessages((prev) => [...prev, sentMessage]);
-
-      socket.emit("sendMessage", { chatId: showChatModal._id, message: sentMessage });
+      socket?.emit("sendMessage", { chatId: showChatModal._id, message: sentMessage });
       setNewMessage("");
       setAttachment(null);
-    } catch (err) {
-      toast.error(`Error sending message: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Error sending message: ${errorMessage}`);
     }
   };
 
-  const getStatusBadgeClass = (status) => {
+  const getStatusBadgeClass = (status: Application['status']): string => {
     switch (status) {
       case 'Applied': return 'status-badge status-applied';
       case 'Under Review': return 'status-badge status-review';
@@ -291,7 +345,7 @@ export default function Dashboard() {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: Application['status']): ReactElement => {
     switch (status) {
       case 'Applied': return <Clock className="h-4 w-4" />;
       case 'Under Review': return <AlertCircle className="h-4 w-4" />;
@@ -592,7 +646,7 @@ export default function Dashboard() {
                         <p>{msg.content}</p>
                         {msg.attachment && (
                           <a 
-                            href={`http://localhost:5000${msg.attachment}`} 
+                            href={`https://hiring-platform-beta.onrender.com${msg.attachment}`} 
                             target="_blank" 
                             className="text-blue-300 underline text-sm mt-1 inline-block"
                           >

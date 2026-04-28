@@ -31,7 +31,7 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
         return;
       }
       try {
-        const res = await fetch("http://localhost:5000/api/auth/profile", {
+        const res = await fetch("https://hiring-platform-beta.onrender.com/api/auth/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch profile");
@@ -88,7 +88,7 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/auth/preferences", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/auth/preferences", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -186,7 +186,7 @@ export default function Navbar({ userType = "candidate" }: NavbarProps) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
               <img
-                src={profilePic.startsWith('http') ? profilePic : `http://localhost:5000${profilePic}`}
+                src={profilePic.startsWith('http') ? profilePic : `https://hiring-platform-beta.onrender.com${profilePic}`}
                 alt="Profile"
                 className="w-8 h-8 rounded-full object-cover border-2 border-primary"
                 onError={handleImageError}

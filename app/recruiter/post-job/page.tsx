@@ -48,7 +48,7 @@ export default function PostJob() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/jobs", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/jobs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

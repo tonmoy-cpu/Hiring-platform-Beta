@@ -29,7 +29,7 @@ export function formatResumeData(data: any) {
 }
 
 export async function fetchResumeFeedback(token: string, jobId: string, resumeText: string) {
-  const res = await fetch(`http://localhost:5000/api/resume/analyze`, {
+  const res = await fetch(`https://hiring-platform-beta.onrender.com/api/resume/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ jobId, resume: resumeText }),

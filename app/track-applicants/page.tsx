@@ -23,12 +23,12 @@ export default function TrackApplicants() {
       return;
     }
 
-    const socketInstance = io("http://localhost:5000", { auth: { token } });
+    const socketInstance = io("https://hiring-platform-beta.onrender.com", { auth: { token } });
     setSocket(socketInstance);
 
     const fetchApplications = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/applications", {
+        const res = await fetch("https://hiring-platform-beta.onrender.com/api/applications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch applications");
@@ -68,7 +68,7 @@ export default function TrackApplicants() {
   const openChat = async (applicationId) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${applicationId}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${applicationId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load chat");
@@ -77,7 +77,7 @@ export default function TrackApplicants() {
       setChatMessages(chat.messages);
       socket.emit("joinChat", chat._id);
 
-      await fetch(`http://localhost:5000/api/chat/${chat._id}/read`, {
+      await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${chat._id}/read`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -94,7 +94,7 @@ export default function TrackApplicants() {
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${showChatModal._id}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${showChatModal._id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -128,7 +128,7 @@ export default function TrackApplicants() {
                   Chat
                 </button>
                 <a
-                  href={`http://localhost:5000/api/resume/download/${app.candidate._id}`}
+                  href={`https://hiring-platform-beta.onrender.com/api/resume/download/${app.candidate._id}`}
                   className="text-sm px-4 py-2 rounded-lg bg-[#313131] text-white hover:bg-[#4a4a4a]"
                 >
                   Download Resume
@@ -150,7 +150,7 @@ export default function TrackApplicants() {
                   >
                     <p className="text-[#313131]">{msg.content}</p>
                     {msg.attachment && (
-                      <a href={`http://localhost:5000${msg.attachment}`} target="_blank" className="text-blue-500">
+                      <a href={`https://hiring-platform-beta.onrender.com${msg.attachment}`} target="_blank" className="text-blue-500">
                         {msg.attachmentType === "link" ? msg.content : `Attachment (${msg.attachmentType})`}
                       </a>
                     )}

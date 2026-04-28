@@ -28,12 +28,12 @@ export default function TrackApplicants() {
       return;
     }
 
-    const socketInstance = io("http://localhost:5000", { auth: { token } });
+    const socketInstance = io("https://hiring-platform-beta.onrender.com", { auth: { token } });
     setSocket(socketInstance);
 
     const fetchApplications = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/applications", {
+        const res = await fetch("https://hiring-platform-beta.onrender.com/api/applications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch applications");
@@ -86,7 +86,7 @@ export default function TrackApplicants() {
     const newStatus = statusUpdates[appId] || applications.find((a) => a._id === appId).status;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/applications/${appId}/status`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/applications/${appId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export default function TrackApplicants() {
     setChatMessages([]);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/chat/${app._id}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${app._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load chat");
@@ -130,7 +130,7 @@ export default function TrackApplicants() {
       setChatMessages(chat.messages);
       socket.emit("joinChat", chat._id);
 
-      await fetch(`http://localhost:5000/api/chat/${chat._id}/read`, {
+      await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${chat._id}/read`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -166,7 +166,7 @@ export default function TrackApplicants() {
     if (attachment) formData.append("attachment", attachment);
 
     try {
-      const targetUrl = `http://localhost:5000/api/chat/${showChatModal.application}`;
+      const targetUrl = `https://hiring-platform-beta.onrender.com/api/chat/${showChatModal.application}`;
       console.log("--- DEBUG: Chat URL Construction V3 - Attempting to send message to URL:", targetUrl); // CRITICAL DEBUG LOG
       console.log("--- DEBUG: showChatModal content for sendMessage V3:", showChatModal); // CRITICAL DEBUG LOG
       const res = await fetch(targetUrl, {
@@ -205,7 +205,7 @@ export default function TrackApplicants() {
     }
     try {
       console.log("Analyzing:", { resumeText: app.resumeText, jobId: app.job._id });
-      const res = await fetch("http://localhost:5000/api/applications/analyze", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/applications/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +239,7 @@ export default function TrackApplicants() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/resume/download/${userId}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/resume/download/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -347,7 +347,7 @@ export default function TrackApplicants() {
                     <p className="text-foreground">{msg.content}</p>
                     {msg.attachment && (
                       <a
-                        href={`http://localhost:5000${msg.attachment}`}
+                        href={`https://hiring-platform-beta.onrender.com${msg.attachment}`}
                         target="_blank"
                         className="text-info underline"
                       >

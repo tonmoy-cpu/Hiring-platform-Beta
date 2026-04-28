@@ -3,100 +3,178 @@
 
 import Navbar from "@/components/navbar";
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast"; // Import toast
+import toast from "react-hot-toast";
 
 export default function Profile() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({});
+
+  const [formData, setFormData] = useState<any>({
+    contact: {},
+    skills: [],
+    experience: [],
+    education: [],
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("token");
+
       if (!token) {
         console.log("No token found");
         return;
       }
+
       try {
-        const res = await fetch("http://localhost:5000/api/auth/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`);
+        const res = await fetch(
+          "https://hiring-platform-beta.onrender.com/api/auth/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch profile: ${res.status}`);
+        }
+
         const data = await res.json();
-        console.log("Profile fetched:", data);
+
         setProfile(data);
-        setFormData(data.resumeParsed || { contact: {}, skills: [], experience: [], education: [] });
-      } catch (err) {
+
+        setFormData(
+          data.resumeParsed || {
+            contact: {},
+            skills: [],
+            experience: [],
+            education: [],
+          }
+        );
+      } catch (err: any) {
         console.error("Error fetching profile:", err.message);
-        toast.error(`Error fetching profile: ${err.message}`); // Use toast
+        toast.error(`Error fetching profile: ${err.message}`);
       }
     };
+
     fetchProfile();
   }, []);
 
-  const handleChange = (e, section) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    section: string
+  ) => {
     const updated = { ...formData };
+
     if (section === "contact") {
-      updated.contact = { ...updated.contact, [e.target.name]: e.target.value };
+      updated.contact = {
+        ...updated.contact,
+        [e.target.name]: e.target.value,
+      };
     }
+
     setFormData(updated);
   };
 
-  const handleArrayChange = (section, index, value) => {
+  const handleArrayChange = (
+    section: string,
+    index: number,
+    value: any
+  ) => {
     const updated = { ...formData };
+
     if (section === "skills") {
       updated.skills[index] = value;
     } else {
-      updated[section][index] = { ...updated[section][index], ...value };
+      updated[section][index] = {
+        ...updated[section][index],
+        ...value,
+      };
     }
+
     setFormData(updated);
   };
 
-  const addItem = (section) => {
+  const addItem = (section: string) => {
     const updated = { ...formData };
+
     if (section === "skills") {
       updated.skills.push("");
     } else if (section === "experience") {
-      updated.experience.push({ title: "", company: "", years: "" });
+      updated.experience.push({
+        title: "",
+        company: "",
+        years: "",
+      });
     } else if (section === "education") {
-      updated.education.push({ degree: "", school: "", year: "" });
+      updated.education.push({
+        degree: "",
+        school: "",
+        year: "",
+      });
     }
+
     setFormData(updated);
   };
 
-  const removeItem = (section, index) => {
+  const removeItem = (section: string, index: number) => {
     const updated = { ...formData };
+
     updated[section].splice(index, 1);
+
     setFormData(updated);
   };
 
   const handleSave = async () => {
     const token = localStorage.getItem("token");
+
     try {
-      const res = await fetch("http://localhost:5000/api/auth/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ resumeParsed: formData }),
-      });
+      const res = await fetch(
+        "https://hiring-platform-beta.onrender.com/api/auth/profile",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            resumeParsed: formData,
+          }),
+        }
+      );
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Failed to update profile");
-      setProfile({ ...profile, resumeParsed: formData });
+
+      if (!res.ok) {
+        throw new Error(data.msg || "Failed to update profile");
+      }
+
+      setProfile({
+        ...profile,
+        resumeParsed: formData,
+      });
+
       setEditMode(false);
-      toast.success("Profile updated successfully!"); // Use toast
-    } catch (err) {
-      console.error("Error updating profile:", err);
-      toast.error("Error: " + err.message); // Use toast
+      toast.success("Profile updated successfully!");
+    } catch (err: any) {
+      console.error("Error updating profile:", err.message);
+      toast.error("Error: " + err.message);
     }
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = "/uploads/default.jpg"; // Corrected path
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>
+  ) => {
+    e.currentTarget.src = "/uploads/default.jpg";
   };
 
-  if (!profile) return <div className="min-h-screen bg-background text-foreground flex items-center justify-center">Loading...</div>; // Use bg-background and text-foreground
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  } // Use bg-background and text-foreground
 
   return (
     <div className="min-h-screen flex flex-col bg-background"> {/* Use bg-background */}
@@ -108,7 +186,7 @@ export default function Profile() {
         <div className="bg-accent p-8 rounded-lg shadow-md"> {/* Use bg-accent */}
           <div className="flex justify-center mb-6">
             <img
-              src={profile.profilePic?.startsWith('http') ? profile.profilePic : `http://localhost:5000${profile.profilePic || '/uploads/default.jpg'}`}
+              src={profile.profilePic?.startsWith('http') ? profile.profilePic : `https://hiring-platform-beta.onrender.com${profile.profilePic || '/uploads/default.jpg'}`}
               alt="Profile"
               className="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg" // Use border-primary
               onError={handleImageError}

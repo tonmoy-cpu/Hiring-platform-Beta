@@ -12,14 +12,14 @@ export default function Login() {
   });
   const router = useRouter();
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Login form data:", formData);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -31,7 +31,7 @@ export default function Login() {
       if (data.token) {
         localStorage.setItem("token", data.token);
         // Fetch user profile to get userType
-        const profileRes = await fetch("http://localhost:5000/api/auth/profile", {
+        const profileRes = await fetch("https://hiring-platform-beta.onrender.com/api/auth/profile", {
           headers: { Authorization: `Bearer ${data.token}` },
           cache: "no-store",
         });
@@ -47,9 +47,10 @@ export default function Login() {
       } else {
         throw new Error(data.msg || "No token received");
       }
-    } catch (err) {
-      console.error("Login error:", err.message);
-      toast.error("Login failed: " + err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      console.error("Login error:", errorMessage);
+      toast.error("Login failed: " + errorMessage);
     }
   };
 

@@ -31,7 +31,7 @@ export default function ResumeExtraction() {
 
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch("http://localhost:5000/api/resume/extract", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/resume/extract", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -60,7 +60,7 @@ export default function ResumeExtraction() {
 
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch("http://localhost:5000/api/resume/analyze", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/resume/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

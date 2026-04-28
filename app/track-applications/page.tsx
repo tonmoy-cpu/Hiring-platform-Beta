@@ -6,28 +6,50 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+// Type definitions
+interface Job {
+  _id: string;
+  title: string;
+  details: string;
+  skills: string[];
+  salary?: string;
+}
+
+interface Application {
+  _id: string;
+  job: Job;
+  candidate: {
+    resumeParsed?: {
+      skills?: string[];
+    };
+  };
+  status: 'Applied' | 'Under Review' | 'Selected' | 'Not Selected';
+  createdAt: string;
+}
+
 export default function TrackApplications() {
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchApplications = async () => {
+    const fetchApplications = async (): Promise<void> => {
       const token = localStorage.getItem("token");
       if (!token) {
         router.push("/");
         return;
       }
       try {
-        const res = await fetch("http://localhost:5000/api/applications", {
+        const res = await fetch("https://hiring-platform-beta.onrender.com/api/applications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch applications");
-        const data = await res.json();
+        const data: Application[] = await res.json();
         setApplications(data);
-      } catch (err) {
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
         console.error("Error fetching applications:", err);
-        toast.error(`Error loading applications: ${err.message}`);
-        if (err.message.includes("401")) {
+        toast.error(`Error loading applications: ${errorMessage}`);
+        if (errorMessage.includes("401")) {
           localStorage.removeItem("token");
           router.push("/");
         }
@@ -36,11 +58,11 @@ export default function TrackApplications() {
     fetchApplications();
   }, [router]);
 
-  const getMissingSkills = (jobSkills, candidateSkills) => {
-    return jobSkills.filter((skill) => !candidateSkills.includes(skill));
+  const getMissingSkills = (jobSkills: string[], candidateSkills: string[]): string[] => {
+    return jobSkills.filter((skill: string) => !candidateSkills.includes(skill));
   };
 
-  const handleAnalyze = async (jobId) => {
+  const handleAnalyze = async (jobId: string): Promise<void> => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please log in to analyze resume.");
@@ -50,7 +72,7 @@ export default function TrackApplications() {
 
     try {
       // Fetch the stored resumeParsed data
-      const res = await fetch("http://localhost:5000/api/resume/get-draft", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/resume/get-draft", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch resume data");
@@ -65,7 +87,7 @@ export default function TrackApplications() {
       const resumeJson = JSON.stringify(resumeData);
       const base64Resume = Buffer.from(resumeJson).toString("base64");
 
-      const analyzeRes = await fetch("http://localhost:5000/api/resume/analyze", {
+      const analyzeRes = await fetch("https://hiring-platform-beta.onrender.com/api/resume/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,10 +98,11 @@ export default function TrackApplications() {
       if (!analyzeRes.ok) throw new Error(await analyzeRes.text());
       const analysisData = await analyzeRes.json();
       toast.success("Resume analyzed successfully!");
-      console.log("Analysis result:", analysisData); // Display or handle result (e.g., modal)
-    } catch (err) {
-      console.error("Analysis failed:", err.message);
-      toast.error(`Analysis failed: ${err.message}`);
+      console.log("Analysis result:", analysisData);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      console.error("Analysis failed:", errorMessage);
+      toast.error(`Analysis failed: ${errorMessage}`);
     }
   };
 

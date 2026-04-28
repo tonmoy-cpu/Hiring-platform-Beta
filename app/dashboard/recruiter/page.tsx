@@ -39,15 +39,16 @@ export default function RecruiterDashboard() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/jobs/recruiter", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/jobs/recruiter", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch jobs");
       const data = await res.json();
       setJobs(data);
-    } catch (err) {
-      toast.error(`Failed to load jobs: ${err.message}`);
-      if (err.message.includes("401")) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Failed to load jobs: ${errorMessage}`);
+      if (errorMessage.includes("401")) {
         localStorage.removeItem("token");
         router.push("/");
       }
@@ -67,15 +68,16 @@ export default function RecruiterDashboard() {
     if (!confirm("Are you sure you want to close this job?")) return;
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}/close`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/jobs/${jobId}/close`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to close job");
       setJobs((prev) => prev.filter((job) => job._id !== jobId));
       toast.success("Job closed successfully!");
-    } catch (err) {
-      toast.error(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 
@@ -86,7 +88,7 @@ export default function RecruiterDashboard() {
     }
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/jobs/${jobId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(formData),
@@ -96,8 +98,9 @@ export default function RecruiterDashboard() {
       setJobs((prev) => prev.map((job) => (job._id === jobId ? updatedJob : job)));
       setEditingJob(null);
       toast.success("Job updated successfully!");
-    } catch (err) {
-      toast.error(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 
@@ -118,15 +121,16 @@ export default function RecruiterDashboard() {
     if (!confirm("Are you sure you want to delete this job?")) return;
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`http://localhost:5000/api/jobs/${jobId}`, {
+      const res = await fetch(`https://hiring-platform-beta.onrender.com/api/jobs/${jobId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to delete job");
       setJobs((prev) => prev.filter((job) => job._id !== jobId));
       toast.success("Job deleted successfully!");
-    } catch (err) {
-      toast.error(`Error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error(`Error: ${errorMessage}`);
     }
   };
 

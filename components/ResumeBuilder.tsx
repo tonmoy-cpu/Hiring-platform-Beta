@@ -35,7 +35,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
 
     const fetchJobs = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/jobs?all=true", {
+        const res = await fetch("https://hiring-platform-beta.onrender.com/api/jobs?all=true", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch jobs");
@@ -129,7 +129,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/resume/save-draft", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/resume/save-draft", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ resumeData: resumeData }),

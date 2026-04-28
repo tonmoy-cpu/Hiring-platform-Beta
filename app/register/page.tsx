@@ -18,10 +18,10 @@ export default function Register() {
   });
   const router = useRouter();
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  const handleFileChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.files[0] });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.files?.[0] || null });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
@@ -42,7 +42,7 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch("https://hiring-platform-beta.onrender.com/api/auth/register", {
         method: "POST",
         body: form,
       });
@@ -50,19 +50,20 @@ export default function Register() {
       if (!res.ok) throw new Error(data.msg || "Registration failed");
       if (data.token) {
         localStorage.setItem("token", data.token);
-        const decoded = jwtDecode(data.token); // Decode token to get user ID
-        localStorage.setItem("userId", decoded.user.id); // Store userId
-        localStorage.setItem("userType", decoded.user.userType); // Store userType
+        const decoded: any = jwtDecode(data.token);
+        localStorage.setItem("userId", decoded.user.id);
+        localStorage.setItem("userType", decoded.user.userType);
         const redirectPath = userType === "recruiter" ? "/recruiter/dashboard" : "/dashboard";
         console.log("Redirecting to:", redirectPath);
-        toast.success("Registration successful!"); // Added toast
+        toast.success("Registration successful!");
         router.push(redirectPath);
       } else {
         toast.error(data.msg);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       console.error("Fetch error:", err);
-      toast.error("Registration failed: " + err.message);
+      toast.error("Registration failed: " + errorMessage);
     }
   };
 
