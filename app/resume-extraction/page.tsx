@@ -1,19 +1,21 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+// remove this line completely
 import toast from "react-hot-toast";
 
 export default function ResumeExtraction() {
-  const [resumeFile, setResumeFile] = useState(null);
-  const [parsedData, setParsedData] = useState(null);
-  const [error, setError] = useState(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [jobId, setJobId] = useState(""); // Add job ID state
-  const router = useRouter();
+  // remove this line completely
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (
+  e: React.ChangeEvent<HTMLInputElement>
+) => {
     setResumeFile(e.target.files[0]);
     setError(null); // Reset error on new file selection
   };
@@ -40,7 +42,7 @@ export default function ResumeExtraction() {
       if (!res.ok) throw new Error(data.error || data.msg || "Extraction failed");
       setParsedData(data.parsedData);
       toast.success("Resume parsed and added to your profile!"); // Use toast
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error extracting resume:", err.message);
       setError(err.message);
       toast.error(`Error: ${err.message}`); // Use toast
@@ -72,7 +74,7 @@ export default function ResumeExtraction() {
       const data = await res.json();
       toast.success("Resume analyzed successfully!"); // Use toast
       console.log("Analysis result:", data); // Display or handle result (e.g., modal)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Analysis failed:", err.message);
       toast.error(`Analysis failed: ${err.message}`); // Use toast
     }

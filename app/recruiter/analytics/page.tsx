@@ -9,7 +9,14 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function ApplicationStatisticsChart() {
-  const [chartData, setChartData] = useState(null);
+  const [chartData, setChartData] = useState<{
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+  }[];
+} | null>(null);
   const [token, setToken] = useState("");
 
   useEffect(() => {
@@ -113,7 +120,14 @@ function ApplicationStatisticsChart() {
 }
 
 function JobPerformance() {
-  const [performanceData, setPerformanceData] = useState([]);
+  const [performanceData, setPerformanceData] = useState<
+  {
+    role?: string;
+    performance?: number;
+    avgScore?: number;
+    applicantsCount?: number;
+  }[]
+>([]);
   const [token, setToken] = useState("");
 
   useEffect(() => {
@@ -148,7 +162,16 @@ function JobPerformance() {
 
   return (
     <div className="space-y-4"> {/* Increased space-y for better readability */}
-      {performanceData.map((item, index) => (
+      {performanceData.map(
+  (
+    item: {
+      role?: string;
+      performance?: number;
+      avgScore?: number;
+      applicantsCount?: number;
+    },
+    index: number
+  ) => (
         <div key={index} className="animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}> {/* Added animation */}
           <div className="flex justify-between items-center mb-1">
             <span className="text-foreground font-medium">{item.role || "Unknown"}</span> {/* Use text-foreground */}
@@ -170,7 +193,14 @@ function JobPerformance() {
 }
 
 function CandidateDemographicsChart() {
-  const [chartData, setChartData] = useState(null);
+  const [chartData, setChartData] = useState<{
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+  }[];
+} | null>(null);
   const [token, setToken] = useState("");
 
   useEffect(() => {
@@ -264,7 +294,7 @@ function CandidateDemographicsChart() {
 }
 
 function AIRecommendations() {
-  const [recommendations, setRecommendations] = useState([]);
+  const [recommendations, setRecommendations] = useState<string[]>([]);
   const [token, setToken] = useState("");
 
   useEffect(() => {
@@ -299,7 +329,7 @@ function AIRecommendations() {
 
   return (
     <ul className="space-y-3 text-foreground"> {/* Increased space-y and use text-foreground */}
-      {recommendations.map((rec, index) => (
+      {recommendations.map((rec: string, index: number) => (
         <li key={index} className="flex items-start gap-2 animate-fade-in" style={{animationDelay: `${index * 0.1}s`}}> {/* Added flex and animation */}
           <span className="text-primary">•</span> {/* Use text-primary for bullet */}
           <span>{rec}</span>

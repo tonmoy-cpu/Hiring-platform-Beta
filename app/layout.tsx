@@ -13,7 +13,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const listener = (e: any) => setToast(e.detail);
+    const listener = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setToast(customEvent.detail);
+    };
 
     window.addEventListener("show-toast", listener);
 

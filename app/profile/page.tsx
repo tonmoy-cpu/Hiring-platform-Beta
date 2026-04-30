@@ -6,10 +6,33 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 export default function Profile() {
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{
+  username?: string;
+  email?: string;
+  userType?: string;
+  profilePic?: string;
+  resumeParsed?: {
+    contact?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+    skills?: string[];
+    experience?: Array<{
+      title?: string;
+      company?: string;
+      years?: string;
+    }>;
+    education?: Array<{
+      degree?: string;
+      school?: string;
+      year?: string;
+    }>;
+  };
+} | null>(null);
   const [editMode, setEditMode] = useState(false);
 
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState({
     contact: {},
     skills: [],
     experience: [],
@@ -76,54 +99,63 @@ export default function Profile() {
     setFormData(updated);
   };
 
-  const handleArrayChange = (
-    section: string,
-    index: number,
-    value: any
-  ) => {
-    const updated = { ...formData };
+const handleArrayChange = (
+  section: string,
+  index: number,
+  value:
+    | string
+    | {
+        title?: string;
+        company?: string;
+        years?: string;
+        degree?: string;
+        school?: string;
+        year?: string;
+      }
+) => {
+  const updated: any = { ...formData };
 
-    if (section === "skills") {
-      updated.skills[index] = value;
-    } else {
-      updated[section][index] = {
-        ...updated[section][index],
-        ...value,
-      };
-    }
+  if (section === "skills") {
+    updated.skills[index] = value as string;
+  } else {
+    updated[section][index] = {
+      ...updated[section][index],
+      ...(value as object),
+    };
+  }
 
-    setFormData(updated);
-  };
+  setFormData(updated);
+};
 
   const addItem = (section: string) => {
-    const updated = { ...formData };
+  const updated: any = { ...formData };
 
-    if (section === "skills") {
-      updated.skills.push("");
-    } else if (section === "experience") {
-      updated.experience.push({
-        title: "",
-        company: "",
-        years: "",
-      });
-    } else if (section === "education") {
-      updated.education.push({
-        degree: "",
-        school: "",
-        year: "",
-      });
-    }
+  if (section === "skills") {
+    updated.skills.push("");
+  } else if (section === "experience") {
+    updated.experience.push({
+      title: "",
+      company: "",
+      years: "",
+    });
+  } else if (section === "education") {
+    updated.education.push({
+      degree: "",
+      school: "",
+      year: "",
+    });
+  }
 
-    setFormData(updated);
-  };
+  setFormData(updated);
+};
 
   const removeItem = (section: string, index: number) => {
-    const updated = { ...formData };
+  const updated: any = { ...formData };
 
-    updated[section].splice(index, 1);
+  updated[section].splice(index, 1);
 
-    setFormData(updated);
-  };
+  setFormData(updated);
+};
 
   const handleSave = async () => {
     const token = localStorage.getItem("token");
@@ -223,7 +255,7 @@ export default function Profile() {
                   placeholder="Phone"
                 />
                 <h3 className="font-bold text-foreground text-lg mt-4 mb-2">Skills</h3> {/* Use text-foreground */}
-                {formData.skills?.map((skill, i) => (
+                {formData.skills?.map((skill: string, i: number) => (
                   <div key={i} className="flex items-center mb-2">
                     <input
                       value={skill}
@@ -246,7 +278,7 @@ export default function Profile() {
                   Add Skill
                 </button>
                 <h3 className="font-bold text-foreground text-lg mt-4 mb-2">Experience</h3> {/* Use text-foreground */}
-                {formData.experience?.map((exp, i) => (
+                {formData.experience?.map((exp: any, i: number) => (
                   <div key={i} className="mb-4 border-b border-border pb-2"> {/* Use border-border */}
                     <input
                       name="title"
@@ -284,7 +316,14 @@ export default function Profile() {
                   Add Experience
                 </button>
                 <h3 className="font-bold text-foreground text-lg mt-4 mb-2">Education</h3> {/* Use text-foreground */}
-                {formData.education?.map((edu, i) => (
+                {formData.education?.map((
+  edu: {
+    degree?: string;
+    school?: string;
+    year?: string;
+  },
+  i: number
+) => (
                   <div key={i} className="mb-4 border-b border-border pb-2"> {/* Use border-border */}
                     <input
                       name="degree"
@@ -347,12 +386,12 @@ export default function Profile() {
                 <div>
                   <h3 className="font-bold text-lg mb-2">Skills</h3>
                   <ul className="list-disc pl-4">
-                    {profile.resumeParsed.skills?.map((s) => <li key={s}>{s}</li>) || <li>N/A</li>}
+                    {profile.resumeParsed.skills?.map((s: string) => <li key={s}>{s}</li>) || <li>N/A</li>}
                   </ul>
                 </div>
                 <div>
                   <h3 className="font-bold text-lg mb-2">Experience</h3>
-                  {profile.resumeParsed.experience?.map((e, i) => (
+                  {profile.resumeParsed.experience?.map((e: any, i: number) => (
                     <p key={i}>
                       {e.title} at {e.company} ({e.years})
                     </p>
@@ -360,7 +399,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg mb-2">Education</h3>
-                  {profile.resumeParsed.education?.map((e, i) => (
+                  {profile.resumeParsed.education?.map((e: any, i: number) => (
                     <p key={i}>
                       {e.degree}, {e.school} ({e.year})
                     </p>

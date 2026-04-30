@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { skillOptions, domainOptions, fetchResumeFeedback } from "@/lib/utils";
+import { skillOptions, fetchResumeFeedback } from "@/lib/utils";
 import { debounce } from "lodash";
 import { fetchDraft } from "@/lib/draftUtils";
 import { X, Save } from 'lucide-react'; // Import icons
@@ -21,10 +21,19 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
   });
   const [feedback, setFeedback] = useState({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
   const [selectedJobId, setSelectedJobId] = useState("");
-  const [jobs, setJobs] = useState([]);
+  const [jobs, setJobs] = useState<
+  {
+    _id: string;
+    title: string;
+    skills?: string[];
+  }[]
+>([]);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const router = useRouter();
-  const debouncedFetchRef = useRef<any>(null);
+  const debouncedFetchRef = useRef<{
+  (data: typeof resumeData): void;
+  cancel?: () => void;
+} | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -41,7 +50,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
         if (!res.ok) throw new Error("Failed to fetch jobs");
         const data = await res.json();
         setJobs(data);
-      } catch (err) {
+      } catch (err: any) {
         toast.error(`Failed to load jobs: ${err.message}`);
       }
     };
@@ -55,14 +64,17 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
   }, [router]);
 
   const debouncedFetchFeedback = useCallback(
-    debounce(async (data) => {
+    debounce(async (data: typeof resumeData) => {
       const token = localStorage.getItem("token");
       if (!token || !selectedJobId) return;
       const resumeText = Buffer.from(JSON.stringify(data)).toString("base64");
       try {
         const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
         if (result && (typeof result.matchScore !== "undefined" || typeof result.score !== "undefined")) {
-          const job = jobs.find((j) => j._id === selectedJobId);
+          const job = jobs.find(
+  (j: { _id: string; skills?: string[] }) =>
+    j._id === selectedJobId
+);
           const normalizedResumeSkills = data.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative"));
           const normalizedJobSkills = job?.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")) || [];
           const atsScore = calculateATSScore(normalizedResumeSkills, normalizedJobSkills);
@@ -78,7 +90,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
         } else {
           setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Feedback error:", err.message);
         setFeedback({
           score: 0,
@@ -97,7 +109,12 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     debouncedFetchRef.current = debouncedFetchFeedback;
   }, [debouncedFetchFeedback]);
 
-  const handleChange = (section, index, field, value) => {
+  const handleChange = (
+  section: string,
+  index: number,
+  field: string,
+  value: string
+) => {
     const newData = { ...resumeData };
     if (section === "experience" || section === "education") {
       newData[section][index][field] = value;
@@ -113,7 +130,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     }
   };
 
-  const addSection = (section) => {
+  const addSection = (section: string) => {
     const newData = { ...resumeData };
     newData[section].push(section === "experience" ? { title: "", company: "", years: "" } : { degree: "", school: "", year: "" });
     setResumeData(newData);
@@ -137,7 +154,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       if (!res.ok) throw new Error(await res.text());
       toast.success("Resume draft saved successfully!");
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(`Error saving draft: ${err.message}`);
     }
   };
@@ -154,7 +171,10 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     const resumeText = Buffer.from(JSON.stringify(resumeData)).toString("base64");
     try {
       const result = await fetchResumeFeedback(token, selectedJobId, resumeText);
-      const job = jobs.find((j) => j._id === selectedJobId);
+      const job = jobs.find(
+  (j: { _id: string; skills?: string[] }) =>
+    j._id === selectedJobId
+);
       const normalizedResumeSkills = resumeData.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative"));
       const normalizedJobSkills = job?.skills.map(s => s.toLowerCase().replace(/\s+/g, "").replace(/\.?js$/, "").replace(/native/, "reactnative")) || [];
       const atsScore = calculateATSScore(normalizedResumeSkills, normalizedJobSkills);
@@ -171,7 +191,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       } else {
         setFeedback({ score: 0, matchedSkills: [], missingSkills: [], feedback: [], atsScore: 0, atsFeedback: [] });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Analysis error:", err.message);
       setFeedback({
         score: 0,
@@ -199,7 +219,7 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
       } else {
         toast.info("No draft found. Starting with a new resume.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Draft load error:", err.message);
       toast.error("Failed to load draft. Please try again.");
     } finally {
@@ -211,14 +231,17 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     console.log("Feedback state updated:", feedback);
   }, [feedback]);
 
-  const calculateATSScore = (resumeSkills, jobSkills) => {
+  const calculateATSScore = (
+  resumeSkills: string[],
+  jobSkills: string[]
+) => {
     if (!jobSkills.length) return 0;
-    const matched = resumeSkills.filter(skill => jobSkills.includes(skill)).length;
+    const matched = resumeSkills.filter((skill: string) =>jobSkills.includes(skill)).length;
     return Math.min(Math.round((matched / jobSkills.length) * 100), 100); // Cap at 100%
   };
 
   const generateATSFeedback = (resumeSkills, jobSkills) => {
-    const missing = jobSkills.filter(skill => !resumeSkills.includes(skill));
+    const missing = jobSkills.filter((skill: string) =>!resumeSkills.includes(skill));
     const feedback = [];
     if (missing.length > 0) {
       feedback.push(`Add these missing skills to improve ATS compatibility: ${missing.join(", ")}.`);
@@ -226,7 +249,9 @@ export default function ResumeBuilder({ onClose }: ResumeBuilderProps) {
     if (resumeSkills.length === 0) {
       feedback.push("Include at least some skills to pass ATS screening.");
     } else if (feedback.length === 0) {
-      feedback.push(`Your resume is ${Math.max(feedback.atsScore || 0, 70) >= 70 ? "well-" : ""}aligned with ATS requirements for this job.`);
+      feedback.push(
+  "Your resume is well-aligned with ATS requirements for this job."
+);
     }
     return feedback;
   };

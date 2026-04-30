@@ -37,7 +37,7 @@ export default function Register() {
     if (userType === "candidate" && formData.resume) form.append("resume", formData.resume);
 
     console.log("FormData contents:");
-    for (let [key, value] of form.entries()) {
+    for (const [key, value] of form.entries()) {
       console.log(`${key}: ${value instanceof File ? value.name : value}`);
     }
 
@@ -50,7 +50,12 @@ export default function Register() {
       if (!res.ok) throw new Error(data.msg || "Registration failed");
       if (data.token) {
         localStorage.setItem("token", data.token);
-        const decoded: any = jwtDecode(data.token);
+        const decoded = jwtDecode<{
+  user: {
+    id: string;
+    userType: string;
+  };
+}>(data.token);
         localStorage.setItem("userId", decoded.user.id);
         localStorage.setItem("userType", decoded.user.userType);
         const redirectPath = userType === "recruiter" ? "/recruiter/dashboard" : "/dashboard";

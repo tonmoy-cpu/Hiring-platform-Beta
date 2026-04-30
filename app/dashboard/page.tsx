@@ -53,10 +53,10 @@ export default function Dashboard() {
   const [preferredDomains, setPreferredDomains] = useState<string[]>([]);
   const [hoveredJob, setHoveredJob] = useState<Job | null>(null);
   const [showApplyModal, setShowApplyModal] = useState<Job | null>(null);
-  const [showPreferencesPopup, setShowPreferencesPopup] = useState(false);
+  const [, setShowPreferencesPopup] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [coverLetter, setCoverLetter] = useState("");
-  const [hasPreferences, setHasPreferences] = useState(false);
+  const [, setHasPreferences] = useState(false);
   const [toastShown, setToastShown] = useState(false);
   const [showChatModal, setShowChatModal] = useState<Chat | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -111,7 +111,9 @@ setSocket(socketInstance);
         setPreferredDomains(profile.preferredDomains || []);
         setHasPreferences(profile.preferredSkills?.length > 0 || profile.preferredDomains?.length > 0);
         setJobs(jobsData);
-        setAppliedJobs(appsData.map((app: any) => app.job._id));
+        setAppliedJobs(
+         appsData.map((app: { job: { _id: string } }) => app.job._id)
+         );
         setApplications(appsData); // Set applications
 
         if (!profile.preferredSkills?.length && !profile.preferredDomains?.length && !toastShown) {

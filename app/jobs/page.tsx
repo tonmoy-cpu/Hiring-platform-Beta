@@ -1,12 +1,12 @@
 "use client";
 
 import Navbar from "@/components/navbar";
-import { useState, useEffect, useRef, ReactElement } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { io, Socket } from "socket.io-client";
 import ResumeBuilder from "@/components/ResumeBuilder";
-import { Briefcase, FileText, MessageSquare, PlusCircle, X } from 'lucide-react';
+// remove this entire line
 
 // Type definitions
 interface Job {
@@ -59,7 +59,13 @@ export default function Jobs() {
   const [showChatModal, setShowChatModal] = useState<Chat | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [coverLetter, setCoverLetter] = useState("");
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<{
+  matchScore?: number;
+  matchedSkills?: string[];
+  missingSkills?: Array<string | { skill: string; suggestion: string }>;
+  feedback?: string[];
+  extractedSkills?: string[];
+} | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -561,7 +567,11 @@ export default function Jobs() {
                     <p className="font-semibold mt-2"><strong>Missing Skills:</strong></p>
                     <ul className="list-disc pl-5">
                       {Array.isArray(analysisResult.missingSkills) && analysisResult.missingSkills.length > 0 ? (
-                        analysisResult.missingSkills.map((item: any, index: number) => (
+                        analysisResult.missingSkills.map(
+  (
+    item: string | { skill: string; suggestion: string },
+    index: number
+  ) => (
                           <li key={index}>
                             {typeof item === "string" ? item : `${item.skill} - ${item.suggestion}`}
                           </li>

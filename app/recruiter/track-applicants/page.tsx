@@ -5,19 +5,20 @@ import { CircleUser, FileText, MoreHorizontal, MessageSquare, X } from "lucide-r
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import io from "socket.io-client";
+import {io,Socket} from "socket.io-client";
 
 export default function TrackApplicants() {
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [statusUpdates, setStatusUpdates] = useState({});
   const [showChatModal, setShowChatModal] = useState(null);
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [attachment, setAttachment] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [socket, setSocket] = useState(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+const [socket, setSocket] = useState<Socket | null>(null);
   const router = useRouter();
   // Removed messageInputRef, relying solely on newMessage state for textarea content
 
@@ -39,7 +40,7 @@ export default function TrackApplicants() {
         if (!res.ok) throw new Error("Failed to fetch applications");
         const data = await res.json();
         setApplications(data);
-      } catch (err) {
+      } catch (err: any) {
         toast.error(`Error: ${err.message}`);
         if (err.message.includes("401")) {
           localStorage.removeItem("token");
@@ -99,8 +100,6 @@ export default function TrackApplicants() {
         const errorData = await res.json();
         throw new Error(errorData.msg || `Failed to update status (Status: ${res.status})`);
       }
-
-      const data = await res.json();
       if (newStatus === "Not Selected") {
         setApplications((prev) => prev.filter((app) => app._id !== appId));
       } else {
@@ -109,7 +108,7 @@ export default function TrackApplicants() {
         );
       }
       toast.success("Status updated successfully!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating status:", err);
       toast.error(`Error: ${err.message}`);
     }
@@ -128,13 +127,13 @@ export default function TrackApplicants() {
       console.log("--- DEBUG: Chat object received in handleChat:", chat); // DEBUG LOG
       setShowChatModal(chat);
       setChatMessages(chat.messages);
-      socket.emit("joinChat", chat._id);
+      socket?.emit("joinChat", chat._id);
 
       await fetch(`https://hiring-platform-beta.onrender.com/api/chat/${chat._id}/read`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (err) {
+    } catch (err: any) {
       toast.error(`Error loading chat: ${err.message}`);
     }
   };
@@ -185,7 +184,7 @@ export default function TrackApplicants() {
       // Clear the textarea by resetting the state
       setNewMessage("");
       setAttachment(null);
-    } catch (err) {
+    } catch (err: any) {
       toast.error(`Error sending message: ${err.message}`);
     }
   };
@@ -220,7 +219,7 @@ export default function TrackApplicants() {
       const analysisData = await res.json();
       setAnalysis(analysisData);
       setSelectedApplicant(app);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error analyzing:", err);
       toast.error(err.message || "Failed to analyze application.");
     }
@@ -256,7 +255,7 @@ export default function TrackApplicants() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Download error:", err);
       toast.error("Error: " + err.message);
     }

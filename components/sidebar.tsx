@@ -1,6 +1,16 @@
 "use client";
 import Link from "next/link";
-import { Home, Briefcase, FileText, BarChart, MessageSquare, Settings, User, HelpCircle, X, PlusCircle } from 'lucide-react';
+import {
+  Home,
+  Briefcase,
+  FileText,
+  BarChart,
+  Settings,
+  User,
+  HelpCircle,
+  X,
+  PlusCircle,
+} from "lucide-react";
 
 type SidebarProps = {
   isOpen: boolean;
