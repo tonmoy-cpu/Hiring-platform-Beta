@@ -9,7 +9,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<{
   username?: string;
   email?: string;
-  userType?: string;
+  userType?: "candidate" | "recruiter";
   profilePic?: string;
   resumeParsed?: {
     contact?: {
